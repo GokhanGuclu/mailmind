@@ -1,0 +1,71 @@
+🧹 1. Veri Temizleme ve Ön İşleme İyileştirmeleri
+
+Türkçe stopword listesi ekle (ör. “ve”, “ama”, “gibi”, “için” vb. kelimeleri çıkar).
+
+Kök bulma (stemming) veya kök çıkarma (lemmatization) uygula.
+
+URL, e-posta, sayı, emoji ve özel karakterleri kaldır.
+
+Başlık ve içerik uzunluğunu (kelime/karakter sayısı) ayrı özellik olarak ekle.
+
+Boş veya anlamsız metinleri tamamen at (ör. sadece “teşekkürler” gibi).
+
+Metinlerde çok geçen kelimeleri (max_df ile) veya çok nadir kelimeleri (min_df ile) optimize et.
+
+🧠 2. Özellik Çıkarımı (Feature Engineering)
+
+TfidfVectorizer yerine CountVectorizer veya ikisini birleştirerek test et.
+
+ngram_range’i (1,2)’den (1,3) veya (1,4)’e çıkar (bazı kategorilerde fark yaratır).
+
+sublinear_tf=True kullanarak TF değerlerini log ölçeğine çek.
+
+TF-IDF özelliklerine “başlık uzunluğu”, “ünlem sayısı”, “rakam sayısı” gibi istatistiksel özellikleri ekle.
+
+FeatureUnion veya ColumnTransformer ile TF-IDF + numeric özellikleri birleştir.
+
+⚙️ 3. Model Geliştirme ve Karşılaştırma
+
+Logistic Regression modelini dene (çoğu TF-IDF işinde çok başarılıdır).
+
+XGBoost, LightGBM veya CatBoost gibi güçlü ağaç tabanlı modelleri test et.
+
+Ensemble yöntemleri (ör. VotingClassifier veya StackingClassifier) ile modelleri birleştir.
+
+GridSearchCV veya RandomizedSearchCV ile hiperparametre optimizasyonu yap.
+
+Modellerde class_weight='balanced' parametresini test et (özellikle dengesiz veri varsa).
+
+Cross-validation’da sadece accuracy değil f1_macro ve precision_recall da ölç.
+
+📊 4. Değerlendirme ve Görselleştirme
+
+Sınıflandırma raporunu (classification_report) CSV olarak kaydet.
+
+Confusion matrix’te yüzdelik oranları göster (sadece sayılar değil).
+
+En çok karıştırılan kategorileri listele (hangi sınıflar benzer görülüyor).
+
+Özellik önemini (feature importance) çıkar ve en anlamlı kelimeleri göster.
+
+Model tahminlerini SHAP veya LIME ile açıklanabilir hale getir.
+
+🧩 5. Veri Dengesizliği ve Genelleme
+
+SMOTE veya RandomOverSampler ile az görülen kategorileri dengele.
+
+StratifiedKFold kullanarak her sınıfın dengeli temsilini sağla.
+
+Modeli farklı test setlerinde (ör. zamana göre ayrılmış veride) test
+
+🧩 7. Teknik ve Uygulama İyileştirmeleri
+
+Modeli Pipeline içine al: (Temizleme → TF-IDF → Model).
+
+Eğitim sonrası hem model.pkl hem vectorizer.pkl dosyalarını versiyonla.
+
+Eğitim metriklerini (accuracy, F1, loss) JSON veya CSV olarak kaydet.
+
+Tahmin aşamasında olasılıklar düşükse “emin değil” etiketi ekleyebilirsin.
+
+Eğitim sürecini otomatikleştirmek için Jupyter Notebook veya CLI parametreli script yap.

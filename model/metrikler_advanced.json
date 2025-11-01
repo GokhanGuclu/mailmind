@@ -1,0 +1,8 @@
+{
+  "model": "Linear SVM",
+  "accuracy": 0.8755,
+  "f1_macro": 0.8757182737630107,
+  "precision_macro": 0.8770202897706753,
+  "recall_macro": 0.8755000000000001,
+  "tarih": "2025-11-01 20:21:14"
+}
