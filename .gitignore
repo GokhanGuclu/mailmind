@@ -32,7 +32,9 @@ model/
 *.pkl
 *.npy
 *.json
-*.png
+
+# Model visualization (ama README'deki örnek harici)
+confusion_matrix*.png
 
 # IDE
 .vscode/
@@ -48,21 +50,20 @@ Thumbs.db
 # Jupyter
 .ipynb_checkpoints/
 
-# Data files - eğer hassas verileriniz varsa
-# mailler.csv
-# *.csv
+# Data files - Hassas veriler
+mailler.csv
+*_backup_*.csv
+mailler_*.csv
+
+# Source files - Üretim kodları (Hassas bilgiler içerebilir)
+mail_generator.py
 
 # Backup files
-*_backup_*.csv
 backup/
 
 # Log files
 *.log
+rpd_counter.json
 
 # Temporary files
 *.tmp
-rpd_counter.json
-
-mail_generator.py
-mailler.csv
-model/*
