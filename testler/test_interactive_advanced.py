@@ -9,7 +9,7 @@ from mail_classifier_model import tahmin_yap
 def main():
     """İnteraktif mail tahmin testi"""
     print("="*70)
-    print("İNTERAKTİF MAİL KATEGORİ TAHMİN SİSTEMİ")
+    print("MAILMIND - İNTERAKTİF MAİL KATEGORİ TAHMİN SİSTEMİ")
     print("="*70)
     
     print("✓ Model modülü hazır!")

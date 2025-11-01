@@ -1,230 +1,128 @@
-# Mail Kategori Sınıflandırma Projesi
+# MailMind - Mail Kategori Sınıflandırma Projesi
 
-Bu proje, Gemini AI kullanarak oluşturulan e-posta verilerini kategorilere ayırmak için makine öğrenmesi modeli geliştirir.
+MailMind, Gemini AI kullanarak oluşturulan e-posta verilerini akıllı şekilde kategorilere ayıran gelişmiş bir makine öğrenmesi sistemidir.
 
 ## Proje Yapısı
 
+### Ana Dosyalar
 - **mail_generator.py**: Gemini API ile e-posta verisi üretir
-- **mail_classifier.py**: Scikit-learn ile temel kategori tahmin modeli eğitir
-- **mail_classifier_advanced.py**: ⭐ **YENİ!** Gelişmiş ML teknikleri ile kategori tahmin modeli (modüler yapı)
-- **mail_classifier_model/**: ⭐ **YENİ!** Modüler mail sınıflandırma paketi
+- **mail_classifier_advanced.py**: Gelişmiş ML model eğitim scripti
+- **mail_classifier_model/**: Modüler mail sınıflandırma paketi
+  - `__init__.py`: Paket dışa aktarmaları
   - `config.py`: Konfigürasyon ve sabitler
   - `preprocessing.py`: MetinTemizleyici ve MetrikCikarici sınıfları
   - `data_loader.py`: Veri yükleme fonksiyonları
   - `model_trainer.py`: Model eğitimi ve karşılaştırma
   - `model_manager.py`: Model kaydetme/yükleme
   - `predictor.py`: Tahmin fonksiyonları
-  - `__init__.py`: Paket dışa aktarmaları
-- **mail_classifier_bert.py**: BERT ile kategori tahmin modeli eğitir
-- **reorganize_categories.py**: ⭐ Kategori yeniden düzenleme aracı
-- **test_model.py**: Temel model için test scripti
-- **test_model_advanced.py**: ⭐ Gelişmiş model için test scripti (100 test örneği - 10 kategori x 10)
-- **test_interactive_advanced.py**: ⭐ İnteraktif manuel test aracı
-- **mailler.csv**: Üretilen e-posta verileri
-- **requirements.txt**: Python bağımlılıkları
+- **testler/**: Test scriptleri
+  - `test_model_advanced.py`: 100 test senaryosu (10 kategori x 10)
+  - `test_interactive_advanced.py`: İnteraktif manuel test aracı
+- **mailler.csv**: Eğitim verileri
+- **model/**: Eğitilmiş modeller
 - **.env**: Environment variables (API key) - Git'e eklenmez
-- **env.example**: Environment variables örneği
 - **.gitignore**: Git ignore kuralları
+- **requirements.txt**: Python bağımlılıkları
 
 ## Kurulum
 
-1. Sanal ortam oluşturun:
+### 1. Sanal Ortam Oluşturun
 ```bash
 python -m venv .venv
 ```
 
-2. Sanal ortamı aktive edin:
+### 2. Sanal Ortamı Aktive Edin
 ```bash
+# Windows PowerShell
+.venv\Scripts\Activate.ps1
+
 # Windows Git Bash
 source .venv/Scripts/activate
 
-# Windows PowerShell
-.venv\Scripts\Activate.ps1
+# Linux/Mac
+source .venv/bin/activate
 ```
 
-3. Bağımlılıkları yükleyin:
+### 3. Bağımlılıkları Yükleyin
 ```bash
 pip install -r requirements.txt
 ```
 
-4. Environment variables ayarlayın:
+### 4. Environment Variables Ayarlayın
 ```bash
-# Windows PowerShell
-copy env.example .env
-
-# Windows Command Prompt
-copy env.example .env
+# Windows PowerShell/CMD
+echo GEMINI_API_KEY=your_api_key_here > .env
 
 # Linux/Mac
-cp env.example .env
+echo "GEMINI_API_KEY=your_api_key_here" > .env
 ```
 
-5. `.env` dosyasını açın ve Gemini API key'inizi ekleyin:
-```
-GEMINI_API_KEY=your_actual_api_key_here
-```
-
-**API Key Nasıl Alınır?**
-- Google AI Studio'ya gidin: https://makersuite.google.com/app/apikey
-- Yeni bir API key oluşturun
-- API key'i kopyalayıp `.env` dosyasına yapıştırın
+**Gemini API Key Nasıl Alınır?**
+1. Google AI Studio'ya gidin: https://makersuite.google.com/app/apikey
+2. Yeni bir API key oluşturun
+3. API key'i `.env` dosyasına ekleyin
 
 ## Kullanım
 
-### 1. E-posta Verisi Üretimi
+### 1. Veri Üretimi (İsteğe Bağlı)
 
-`.env` dosyasında API key'inizi ayarladıktan sonra:
+Eğitim verileri zaten `mailler.csv` dosyasında mevcuttur. Yeni veri üretmek isterseniz:
 
 ```bash
 python mail_generator.py
 ```
 
-Bu komut:
-- 10 farklı kategoride e-posta üretir
-- **Kategori-özel prompt mühendisliği** ile yüksek kaliteli, tutarlı e-postalar üretir
-- Her kategori için detaylı içerik kuralları ve örnekler içerir
-- Her kategori için hedef sayıda e-posta oluşturur
-- Günlük istek limitini (RPD) takip eder
-- Verileri `mailler.csv` dosyasına kaydeder
-
 **Özellikler:**
-- ✅ Her kategori için özel açıklamalar ve kurallar
-- ✅ Gerçekçi ve makine öğrenmesi dostu e-postalar
-- ✅ Kategori karışıklığını minimize eden prompt tasarımı
-- ✅ Tutarlı ve öngörülebilir veri kalitesi
-
-### 1.5. Kategori Yeniden Düzenleme (İsteğe Bağlı)
-
-Eğer kategorileri birleştirmek veya yeniden düzenlemek istiyorsanız:
-
-```bash
-python reorganize_categories.py
-```
-
-Bu komut:
-- ✅ Mevcut veriyi yedekler
-- ✅ Kategorileri yeniden düzenler (birleştirme/yeniden adlandırma)
-- ✅ Eski model dosyalarını otomatik temizler
-- ✅ `mailler.csv` dosyasını günceller
-- ⚠️  Yeniden düzenleme sonrası modeli tekrar eğitmeniz gerekir
+- ✅ 10 farklı kategori (İş/Acil, Pazarlama, Eğitim, vb.)
+- ✅ Kategori-özel prompt mühendisliği
+- ✅ Gerçekçi ve tutarlı e-posta üretimi
+- ✅ Günlük istek limiti (RPD) kontrolü
 
 ### 2. Model Eğitimi
-
-#### 🎯 Gelişmiş ML Yaklaşımı (ÖNERİLEN)
-
-E-posta kategorilerini tahmin etmek için gelişmiş modeli eğitin:
 
 ```bash
 python mail_classifier_advanced.py
 ```
 
-Bu komut:
-- ⭐ **5 farklı modeli karşılaştırır** (Naive Bayes, Logistic Regression, Random Forest, SVM, XGBoost)
-- ⚡ **Performans ve hız dengesi** (3-5 dakika içinde eğitilir)
-- 🔧 **Gelişmiş özellik çıkarımı** (TF-IDF + metrikler)
-- 📊 **Detaylı metrik raporları** (Accuracy, F1, Precision, Recall)
-- 🗺️ **Normalize confusion matrix** görselleştirmesi
-- 📈 **En çok karıştırılan kategoriler** analizi
-- 🎯 **En önemli özellikler** (kelimeler) listesi
-- 💾 **JSON metrik kaydı** ve **CSV özellik önemleri**
+**Çıktı:**
+- ⭐ 5 farklı model karşılaştırması (Naive Bayes, Logistic Regression, Random Forest, SVM, XGBoost)
+- ⚡ Hız: 3-5 dakika
+- 📊 Detaylı metrik raporları
+- 🗺️ Normalize confusion matrix
+- 📈 En önemli özellikler analizi
+- 💾 Model dosyaları `model/` klasörüne kaydedilir
 
-#### Temel ML Yaklaşımı (Scikit-learn)
+### 3. Model Test
 
-Daha basit ve hızlı model için:
-
+#### İnteraktif Test
 ```bash
-python mail_classifier.py
+python testler/test_interactive_advanced.py
 ```
 
-Bu komut:
-- 3 farklı modeli karşılaştırır (Naive Bayes, Random Forest, SVM)
-- En iyi modeli seçer ve kaydeder
-- Confusion matrix görselleştirmesi oluşturur
-- Test örnekleriyle tahmin yapar
+Kendi mail başlığı ve içeriğinizi girebilir, tahminleri görüntüleyebilirsiniz.
 
-#### BERT Yaklaşımı
-
-Derin öğrenme tabanlı BERT modeli ile eğitim:
-
+#### Otomatik Test
 ```bash
-python mail_classifier_bert.py
+python testler/test_model_advanced.py
 ```
 
-Bu komut:
-- BERTurk veya Multilingual BERT kullanır
-- Transfer learning ile fine-tuning yapar
-- Daha yüksek doğruluk oranı elde eder
-- `confusion_matrix_bert.png` oluşturur
-
-**Not**: BERT eğitimi daha uzun sürer ve daha fazla RAM/bellek gerektirir.
-
-### 3. Model Kullanımı
-
-#### İnteraktif Tahmin Araçları
-
-Eğitilmiş modellerle interaktif tahmin yapmak için:
-
-```bash
-# ⭐ İnteraktif manuel giriş (ÖNERİLEN - Kendi maillerinizi test edin)
-python test_interactive_advanced.py
-
-# ⭐ Otomatik test senaryoları (100 test örneği - 10 kategori x 10)
-python test_model_advanced.py
-
-# Temel Scikit-learn modeli için
-python test_model.py
-
-# BERT modeli için
-python test_model_bert.py
-```
-
-**İnteraktif araç (`test_interactive_advanced.py`):**
-- Kendi mail başlığı ve içeriğinizi manuel olarak girebilirsiniz
-- Tüm kategoriler için detaylı olasılık dağılımı gösterir
-- Güven skorları ve görsel grafikler içerir
-- Sürekli test yapabilir, 'çıkış' ile çıkabilirsiniz
-
-**Otomatik test (`test_model_advanced.py`):**
-- 100 hazır test senaryosu (10 kategori x 10 örnek)
-- Doğruluk oranı ve genel performans gösterir
-- Model karşılaştırması için idealdir
+100 hazır test senaryosu ile modelinizi değerlendirin.
 
 #### Programatik Kullanım
-
-Kod içinde kullanmak için:
-
 ```python
-from mail_classifier import tahmin_yap
+from mail_classifier_model import tahmin_yap
 
-baslik = "Toplantı Bugün"
-icerik = "Yarınki proje toplantısı saat 14:00'te yapılacak."
+baslik = "Toplantı Daveti"
+icerik = "Yarın saat 14:00'te proje toplantısı yapılacaktır."
 
 tahmin, olasiliklar = tahmin_yap(baslik, icerik)
-print(f"Tahmin edilen kategori: {tahmin}")
+print(f"Tahmin: {tahmin}")
+print(f"Güven: {olasiliklar[tahmin]:.2%}")
 ```
-
-## Model Özellikleri
-
-### Gelişmiş Model (mail_classifier_advanced.py)
-- ⭐ **Gelişmiş Özellik Çıkarımı**: TF-IDF + metrikler (kelime sayısı, karakter sayısı, cümle sayısı, vb.)
-- 🧹 **Akıllı Veri Temizleme**: URL, e-posta, sayı temizleme, Türkçe stopwords
-- 🤖 **5 Model Karşılaştırması**: Naive Bayes, Logistic Regression, Random Forest, SVM, XGBoost
-- 📊 **Veri Dengeleme**: SMOTE ile oversampling
-- 📈 **Gelişmiş N-grams**: (1,3) range ile trigram desteği
-- 🎯 **Detaylı Metrikler**: Accuracy, F1-Macro, Precision-Macro, Recall-Macro
-- 📉 **Normalize Confusion Matrix**: Yüzdelik oranlarla görselleştirme
-- 🔍 **Özellik Önem Analizi**: En anlamlı kelimeler/özellikler
-- 📝 **Kapsamlı Raporlama**: JSON metrikler, CSV özellik önemleri
-
-### Temel Model (mail_classifier.py)
-- **TF-IDF Vektörizasyon**: Unigram ve bigram özellikler
-- **Model Seçimi**: 3 farklı algoritma karşılaştırması
-- **Cross-Validation**: 5-fold cross validation ile doğrulama
-- **Detaylı Raporlama**: Confusion matrix ve classification report
 
 ## Kategoriler
 
-Kategoriler daha anlamlı ve yönetilebilir olacak şekilde optimize edilmiştir:
+MailMind 10 farklı kategori tanır:
 
 - **İş/Acil**: İş e-postaları ve acil durum bildirimleri
 - **Güvenlik/Uyarı**: Güvenlik uyarıları ve bildirimler
@@ -237,72 +135,70 @@ Kategoriler daha anlamlı ve yönetilebilir olacak şekilde optimize edilmiştir
 - **Sağlık**: Sağlık ile ilgili e-postalar
 - **Diğer**: Diğer tüm kategoriler
 
-**Not**: Eğer veri setinizde eski kategori adları varsa, `python reorganize_categories.py` komutunu çalıştırarak otomatik olarak yeni kategorilere dönüştürebilirsiniz.
+## Model Özellikleri
 
-## Notlar
+### Gelişmiş Özellik Çıkarımı
+- **TF-IDF Vektörizasyon**: 12,000 özellik, (1,3) ngram range
+- **Metrik Özellikleri**: Kelime sayısı, karakter sayısı, cümle sayısı, büyük harf, noktalama, ortalama kelime uzunluğu
+- **Birleşik Özellik Seti**: TF-IDF + metrikler
 
-- Günlük API limiti (RPD) varsayılan olarak 1500 olarak ayarlanmıştır
-- Temel model dosyaları: `mail_model.pkl` ve `mail_vectorizer.pkl`
-- **Gelişmiş model dosyaları**: `model/` klasöründe kaydedilir:
-  - `model/mail_model_advanced.pkl`
-  - `model/mail_vectorizer_advanced.pkl`
-  - `model/scaler_advanced.pkl`
-  - `model/temizleyici_advanced.pkl`
-  - `model/metrik_cikarici_advanced.pkl`
-  - `model/label_to_id_advanced.npy`
-  - `model/id_to_label_advanced.npy`
-  - `model/metrikler_advanced.json`
-  - `model/ozellik_onemleri.csv`
-- BERT model dosyaları: `bert_model/` klasöründe kaydedilir
-- Confusion matrix: `confusion_matrix.png` (temel), `confusion_matrix_advanced.png` (gelişmiş), ve `confusion_matrix_bert.png` (BERT)
-
-## Model Karşılaştırması
-
-Bu proje, hem geleneksel makine öğrenmesi hem de derin öğrenme yaklaşımlarını içerir:
-
-- **Temel Scikit-learn**: Hızlı eğitim, daha az kaynak gerektirir
-- **⭐ Gelişmiş Scikit-learn**: En yüksek denge (doğruluk + hız + özellikler)
-- **BERT**: Daha yüksek doğruluk, bağlamsal anlama yeteneği
-- Her model aynı veri seti ile eğitilir ve karşılaştırılabilir
-
-### Hangi Modeli Seçmeliyim?
-
-- **Gelişmiş Model**: Genel kullanım için **EN ÖNERİLEN** - iyi performans, dengeli özellikler
-- **Temel Model**: Hızlı prototip veya çok basit kullanım durumları için
-- **BERT Model**: Maksimum doğruluk isteniyorsa ve kaynak varsa
-
-## Gelişmiş Model Özellikleri Detayları
-
-### Veri Temizleme
-✅ Türkçe stopwords listesi ile gereksiz kelimeler kaldırılır  
-✅ URL, e-posta adresi ve sayılar temizlenir  
-✅ Özel karakterler normalize edilir  
-✅ Minimum kelime/karakter sayısı kontrolü ile anlamsız metinler filtrelenir  
-
-### Özellik Mühendisliği
-✅ **TF-IDF Vektörizasyon**: 12,000 özellik, (1,3) ngram range, sublinear_tf (performans için optimize)  
-✅ **Metrik Özellikleri**: Kelime sayısı, karakter sayısı, cümle sayısı, büyük harf sayısı, ünlem/soru işareti sayısı, ortalama kelime uzunluğu  
-✅ **Birleşik Özellik Seti**: TF-IDF + metrikler kombine edilir  
+### Akıllı Veri Temizleme
+- URL, e-posta, sayı temizleme
+- Türkçe stopwords filtresi
+- Özel karakter normalizasyonu
+- Minimum metin uzunluğu kontrolü
 
 ### Model Algoritmaları
-✅ **Naive Bayes**: Hızlı baseline model (sadece TF-IDF kullanır - negatif değer alamaz)  
-✅ **Logistic Regression**: Genellikle TF-IDF işlerinde en başarılı (hız için optimize)  
-✅ **Random Forest**: Ensemble yöntemi, 50 ağaç, max_depth=30  
-✅ **Linear SVM**: Lineer SVC, hızlı ve etkili  
-✅ **XGBoost**: Gradient boosting, 50 tree, max_depth=5  
+- **Naive Bayes**: Hızlı baseline
+- **Logistic Regression**: Dengeli performans
+- **Random Forest**: Ensemble (50 ağaç)
+- **Linear SVM**: Hızlı ve etkili
+- **XGBoost**: Gradient boosting
 
-### Veri Dengeleme ve Hız Optimizasyonu
-✅ **Class Weights**: Model seviyesinde dengesizlik düzeltmesi  
-✅ **SMOTE kaldırıldı**: Hız için SMOTE yerine class_weight kullanılıyor  
-✅ **Performans/hız dengesi**: 12,000 özellik, (1,3) ngram  
-✅ **Ağaç sayıları optimize**: Random Forest 50, XGBoost 50  
-✅ **Eğitim süresi**: ~3-5 dakika (5 model karşılaştırması ile)  
+### Performans
+- **Eğitim Süresi**: 3-5 dakika
+- **Class Weights**: Veri dengesizliği yönetimi
+- **Optimize Hiperparametreler**: Hız ve performans dengesi
 
-### Değerlendirme ve Raporlama
-✅ Normalize confusion matrix (yüzdelik)  
-✅ Accuracy, F1-Macro, Precision-Macro, Recall-Macro metrikleri  
-✅ En çok karıştırılan kategoriler analizi  
-✅ Feature importance ile en anlamlı kelimeler  
-✅ JSON formatında metrik kaydı  
-✅ CSV formatında özellik önemleri  
+### Değerlendirme
+- Accuracy, F1-Macro, Precision-Macro, Recall-Macro
+- Normalize confusion matrix
+- En çok karıştırılan kategoriler analizi
+- Feature importance
 
+## Model Dosyaları
+
+Model eğitim sonrası `model/` klasörüne kaydedilir:
+
+- `mail_model_advanced.pkl` - Eğitilmiş model
+- `mail_vectorizer_advanced.pkl` - TF-IDF vektörizer
+- `scaler_advanced.pkl` - Standart normalizasyon
+- `temizleyici_advanced.pkl` - Metin temizleyici
+- `metrik_cikarici_advanced.pkl` - Metrik çıkarıcı
+- `label_to_id_advanced.npy` - Label eşleştirmesi
+- `id_to_label_advanced.npy` - Ters eşleştirme
+- `metrikler_advanced.json` - Performans metrikleri
+- `ozellik_onemleri.csv` - En önemli özellikler
+- `confusion_matrix_advanced.png` - Karışıklık matrisi
+
+## Güvenlik
+
+- ✅ API key `.env` dosyasında saklanır
+- ✅ `.env` dosyası `.gitignore` listesinde
+- ✅ Özel bilgileriniz Git'e yüklenmez
+
+## Gereksinimler
+
+- Python 3.8+
+- google-generativeai
+- scikit-learn
+- pandas, numpy
+- matplotlib, seaborn
+- xgboost
+- python-dotenv
+
+Tüm bağımlılıklar `requirements.txt` dosyasında listelenmiştir.
+
+## Lisans
+
+Bu proje eğitim amaçlı geliştirilmiştir.

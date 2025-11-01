@@ -65,3 +65,4 @@ rpd_counter.json
 
 mail_generator.py
 mailler.csv
+model/*

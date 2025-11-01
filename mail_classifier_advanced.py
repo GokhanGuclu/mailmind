@@ -1,5 +1,5 @@
 """
-Gelişmiş Mail Kategori Tahmin Modeli - Ana Eğitim Scripti
+MailMind - Mail Kategori Sınıflandırma Modeli Eğitimi
 
 Bu script, mail_classifier_model paketini kullanarak
 gelişmiş makine öğrenmesi modelini eğitir.
@@ -15,7 +15,7 @@ from mail_classifier_model import (
 def main():
     """Ana fonksiyon"""
     print("="*70)
-    print("GELİŞMİŞ MAIL KATEGORİ TAHMİN MODELİ EĞİTİMİ")
+    print("MAILMIND - GELİŞMİŞ MAIL KATEGORİ SINIFLANDIRMA MODELİ EĞİTİMİ")
     print("="*70)
     
     # Veriyi yükle

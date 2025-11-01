@@ -9,7 +9,7 @@ from mail_classifier_model import tahmin_yap
 def main():
     """Test için örnek mail tahminleri"""
     print("="*70)
-    print("GELİŞMİŞ MAİL TAHMİN TESTİ")
+    print("MAILMIND - GELİŞMİŞ MAİL KATEGORİ TAHMİN TESTİ")
     print("="*70)
     
     # Örnek mailler (10 kategori x 10 örnek = 100 test)
