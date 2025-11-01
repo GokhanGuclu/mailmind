@@ -22,6 +22,9 @@ Bu proje, Gemini AI kullanarak oluşturulan e-posta verilerini kategorilere ayı
 - **test_interactive_advanced.py**: ⭐ İnteraktif manuel test aracı
 - **mailler.csv**: Üretilen e-posta verileri
 - **requirements.txt**: Python bağımlılıkları
+- **.env**: Environment variables (API key) - Git'e eklenmez
+- **env.example**: Environment variables örneği
+- **.gitignore**: Git ignore kuralları
 
 ## Kurulum
 
@@ -44,11 +47,33 @@ source .venv/Scripts/activate
 pip install -r requirements.txt
 ```
 
+4. Environment variables ayarlayın:
+```bash
+# Windows PowerShell
+copy env.example .env
+
+# Windows Command Prompt
+copy env.example .env
+
+# Linux/Mac
+cp env.example .env
+```
+
+5. `.env` dosyasını açın ve Gemini API key'inizi ekleyin:
+```
+GEMINI_API_KEY=your_actual_api_key_here
+```
+
+**API Key Nasıl Alınır?**
+- Google AI Studio'ya gidin: https://makersuite.google.com/app/apikey
+- Yeni bir API key oluşturun
+- API key'i kopyalayıp `.env` dosyasına yapıştırın
+
 ## Kullanım
 
 ### 1. E-posta Verisi Üretimi
 
-Gemini API key'inizi `mail_generator.py` dosyasına ekleyin ve çalıştırın:
+`.env` dosyasında API key'inizi ayarladıktan sonra:
 
 ```bash
 python mail_generator.py

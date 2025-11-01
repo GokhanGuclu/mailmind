@@ -7,10 +7,13 @@ import random
 import time
 import re
 import json
+from dotenv import load_dotenv
 
-# Gemini API Key'i buraya girin veya environment variable olarak ayarlayın
-# API_KEY = "YOUR_GEMINI_API_KEY_HERE"
-API_KEY = os.getenv('GEMINI_API_KEY', 'AIzaSyAkug3V-ewI-2W_V6d7ZlPhkqMr3JV1H6A')
+# .env dosyasından environment variables'ları yükle
+load_dotenv()
+
+# Gemini API Key'i .env dosyasından veya environment variable'dan al
+API_KEY = os.getenv('GEMINI_API_KEY')
 
 # Kategoriler
 KATEGORILER = [
@@ -440,9 +443,9 @@ def main():
     print("=" * 60)
     
     # API key kontrolü
-    if API_KEY == 'YOUR_GEMINI_API_KEY_HERE':
+    if not API_KEY:
         print("⚠ HATA: API key ayarlanmamış!")
-        print("Lütfen kod içinde API_KEY değişkenini düzenleyin veya GEMINI_API_KEY environment variable'ını ayarlayın.")
+        print("Lütfen .env dosyasında GEMINI_API_KEY değerini ayarlayın.")
         return
     
     # Gemini API'yi başlat

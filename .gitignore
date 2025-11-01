@@ -1,0 +1,67 @@
+# Environment variables - ÖZEL BİLGİLERİNİZ
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Model files - model klasöründeki tüm dosyalar
+model/
+*.pkl
+*.npy
+*.json
+*.png
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data files - eğer hassas verileriniz varsa
+# mailler.csv
+# *.csv
+
+# Backup files
+*_backup_*.csv
+backup/
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp
+rpd_counter.json
+
+mail_generator.py
+mailler.csv
