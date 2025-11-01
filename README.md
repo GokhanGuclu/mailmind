@@ -135,6 +135,18 @@ MailMind 10 farklı kategori tanır:
 - **Sağlık**: Sağlık ile ilgili e-postalar
 - **Diğer**: Diğer tüm kategoriler
 
+## Model Performansı
+
+Model eğitim sonrası detaylı performans analizi yapılır:
+
+![Confusion Matrix](confusion_matrix_advanced.png)
+
+**Örnek Model Çıktısı (Linear SVM):**
+- ✅ %84-92 arasında kategori bazında doğruluk
+- ✅ En başarılı kategoriler: Sağlık (92%), Abonelik/Fatura (92%), Spam (90%)
+- ✅ En çok karışan: Pazarlama → Abonelik/Fatura (%6 karışıklık)
+- ✅ Genel olarak yüksek kategori ayrımı başarılı
+
 ## Model Özellikleri
 
 ### Gelişmiş Özellik Çıkarımı
