@@ -1,37 +1,39 @@
-# MailMind - Mail Kategori Sınıflandırma Projesi
+# MailMind - Email Category Classification Project
 
-MailMind, Gemini AI kullanarak oluşturulan e-posta verilerini akıllı şekilde kategorilere ayıran gelişmiş bir makine öğrenmesi sistemidir.
+MailMind is an advanced machine learning system that intelligently categorizes email data created using Gemini AI.
 
-## Proje Yapısı
+> 🇹🇷 [Turkish Version](README_TR.md)
 
-### Ana Dosyalar
-- **mail_generator.py**: Gemini API ile e-posta verisi üretir
-- **mail_classifier_advanced.py**: Gelişmiş ML model eğitim scripti
-- **mail_classifier_model/**: Modüler mail sınıflandırma paketi
-  - `__init__.py`: Paket dışa aktarmaları
-  - `config.py`: Konfigürasyon ve sabitler
-  - `preprocessing.py`: MetinTemizleyici ve MetrikCikarici sınıfları
-  - `data_loader.py`: Veri yükleme fonksiyonları
-  - `model_trainer.py`: Model eğitimi ve karşılaştırma
-  - `model_manager.py`: Model kaydetme/yükleme
-  - `predictor.py`: Tahmin fonksiyonları
-- **testler/**: Test scriptleri
-  - `test_model_advanced.py`: 100 test senaryosu (10 kategori x 10)
-  - `test_interactive_advanced.py`: İnteraktif manuel test aracı
-- **mailler.csv**: Eğitim verileri
-- **model/**: Eğitilmiş modeller
-- **.env**: Environment variables (API key) - Git'e eklenmez
-- **.gitignore**: Git ignore kuralları
-- **requirements.txt**: Python bağımlılıkları
+## Project Structure
 
-## Kurulum
+### Main Files
+- **mail_generator.py**: Generates email data using Gemini API
+- **mail_classifier_advanced.py**: Advanced ML model training script
+- **mail_classifier_model/**: Modular email classification package
+  - `__init__.py`: Package exports
+  - `config.py`: Configuration and constants
+  - `preprocessing.py`: MetinTemizleyici and MetrikCikarici classes
+  - `data_loader.py`: Data loading functions
+  - `model_trainer.py`: Model training and comparison
+  - `model_manager.py`: Model saving/loading
+  - `predictor.py`: Prediction functions
+- **testler/**: Test scripts
+  - `test_model_advanced.py`: 100 test scenarios (10 categories x 10)
+  - `test_interactive_advanced.py`: Interactive manual testing tool
+- **mailler.csv**: Training data
+- **model/**: Trained models
+- **.env**: Environment variables (API key) - not added to Git
+- **.gitignore**: Git ignore rules
+- **requirements.txt**: Python dependencies
 
-### 1. Sanal Ortam Oluşturun
+## Installation
+
+### 1. Create Virtual Environment
 ```bash
 python -m venv .venv
 ```
 
-### 2. Sanal Ortamı Aktive Edin
+### 2. Activate Virtual Environment
 ```bash
 # Windows PowerShell
 .venv\Scripts\Activate.ps1
@@ -43,12 +45,12 @@ source .venv/Scripts/activate
 source .venv/bin/activate
 ```
 
-### 3. Bağımlılıkları Yükleyin
+### 3. Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Environment Variables Ayarlayın
+### 4. Configure Environment Variables
 ```bash
 # Windows PowerShell/CMD
 echo GEMINI_API_KEY=your_api_key_here > .env
@@ -57,149 +59,149 @@ echo GEMINI_API_KEY=your_api_key_here > .env
 echo "GEMINI_API_KEY=your_api_key_here" > .env
 ```
 
-**Gemini API Key Nasıl Alınır?**
-1. Google AI Studio'ya gidin: https://makersuite.google.com/app/apikey
-2. Yeni bir API key oluşturun
-3. API key'i `.env` dosyasına ekleyin
+**How to Get Gemini API Key?**
+1. Go to Google AI Studio: https://makersuite.google.com/app/apikey
+2. Create a new API key
+3. Add the API key to the `.env` file
 
-## Kullanım
+## Usage
 
-### 1. Veri Üretimi (İsteğe Bağlı)
+### 1. Data Generation (Optional)
 
-Eğitim verileri zaten `mailler.csv` dosyasında mevcuttur. Yeni veri üretmek isterseniz:
+Training data is already available in the `mailler.csv` file. If you want to generate new data:
 
 ```bash
 python mail_generator.py
 ```
 
-**Özellikler:**
-- ✅ 10 farklı kategori (İş/Acil, Pazarlama, Eğitim, vb.)
-- ✅ Kategori-özel prompt mühendisliği
-- ✅ Gerçekçi ve tutarlı e-posta üretimi
-- ✅ Günlük istek limiti (RPD) kontrolü
+**Features:**
+- ✅ 10 different categories (Business/Urgent, Marketing, Education, etc.)
+- ✅ Category-specific prompt engineering
+- ✅ Realistic and consistent email generation
+- ✅ Daily request limit (RPD) control
 
-### 2. Model Eğitimi
+### 2. Model Training
 
 ```bash
 python mail_classifier_advanced.py
 ```
 
-**Çıktı:**
-- ⭐ 5 farklı model karşılaştırması (Naive Bayes, Logistic Regression, Random Forest, SVM, XGBoost)
-- ⚡ Hız: 3-5 dakika
-- 📊 Detaylı metrik raporları
-- 🗺️ Normalize confusion matrix
-- 📈 En önemli özellikler analizi
-- 💾 Model dosyaları `model/` klasörüne kaydedilir
+**Output:**
+- ⭐ Comparison of 5 different models (Naive Bayes, Logistic Regression, Random Forest, SVM, XGBoost)
+- ⚡ Speed: 3-5 minutes
+- 📊 Detailed metric reports
+- 🗺️ Normalized confusion matrix
+- 📈 Most important features analysis
+- 💾 Model files saved to `model/` folder
 
-### 3. Model Test
+### 3. Model Testing
 
-#### İnteraktif Test
+#### Interactive Test
 ```bash
 python testler/test_interactive_advanced.py
 ```
 
-Kendi mail başlığı ve içeriğinizi girebilir, tahminleri görüntüleyebilirsiniz.
+Enter your own email subject and content, and view predictions.
 
-#### Otomatik Test
+#### Automatic Test
 ```bash
 python testler/test_model_advanced.py
 ```
 
-100 hazır test senaryosu ile modelinizi değerlendirin.
+Evaluate your model with 100 predefined test scenarios.
 
-#### Programatik Kullanım
+#### Programmatic Usage
 ```python
 from mail_classifier_model import tahmin_yap
 
-baslik = "Toplantı Daveti"
-icerik = "Yarın saat 14:00'te proje toplantısı yapılacaktır."
+baslik = "Meeting Invitation"
+icerik = "A project meeting will be held tomorrow at 14:00."
 
 tahmin, olasiliklar = tahmin_yap(baslik, icerik)
-print(f"Tahmin: {tahmin}")
-print(f"Güven: {olasiliklar[tahmin]:.2%}")
+print(f"Prediction: {tahmin}")
+print(f"Confidence: {olasiliklar[tahmin]:.2%}")
 ```
 
-## Kategoriler
+## Categories
 
-MailMind 10 farklı kategori tanır:
+MailMind recognizes 10 different categories:
 
-- **İş/Acil**: İş e-postaları ve acil durum bildirimleri
-- **Güvenlik/Uyarı**: Güvenlik uyarıları ve bildirimler
-- **Pazarlama**: Reklam ve alışveriş e-postaları
-- **Sosyal Medya**: Sosyal medya bildirimleri
-- **Spam**: İstenmeyen e-postalar
-- **Abonelik/Fatura**: Üyelik, abonelik ve fatura e-postaları
-- **Kişisel**: Kişisel iletişim ve mesajlar
-- **Eğitim/Öğretim**: Eğitim ve öğretim içerikli e-postalar
-- **Sağlık**: Sağlık ile ilgili e-postalar
-- **Diğer**: Diğer tüm kategoriler
+- **İş/Acil**: Business emails and urgent notifications
+- **Güvenlik/Uyarı**: Security warnings and alerts
+- **Pazarlama**: Advertising and shopping emails
+- **Sosyal Medya**: Social media notifications
+- **Spam**: Unwanted emails
+- **Abonelik/Fatura**: Membership, subscription, and invoice emails
+- **Kişisel**: Personal communication and messages
+- **Eğitim/Öğretim**: Education-related emails
+- **Sağlık**: Health-related emails
+- **Diğer**: All other categories
 
-## Model Performansı
+## Model Performance
 
-Model eğitim sonrası detaylı performans analizi yapılır:
+Detailed performance analysis is performed after model training:
 
 ![Confusion Matrix](confusion_matrix_advanced.png)
 
-**Örnek Model Çıktısı (Linear SVM):**
-- ✅ %84-92 arasında kategori bazında doğruluk
-- ✅ En başarılı kategoriler: Sağlık (92%), Abonelik/Fatura (92%), Spam (90%)
-- ✅ En çok karışan: Pazarlama → Abonelik/Fatura (%6 karışıklık)
-- ✅ Genel olarak yüksek kategori ayrımı başarılı
+**Example Model Output (Linear SVM):**
+- ✅ 84-92% category-wise accuracy
+- ✅ Most successful categories: Sağlık (92%), Abonelik/Fatura (92%), Spam (90%)
+- ✅ Most confused: Pazarlama → Abonelik/Fatura (6% confusion)
+- ✅ Overall highly successful category distinction
 
-## Model Özellikleri
+## Model Features
 
-### Gelişmiş Özellik Çıkarımı
-- **TF-IDF Vektörizasyon**: 12,000 özellik, (1,3) ngram range
-- **Metrik Özellikleri**: Kelime sayısı, karakter sayısı, cümle sayısı, büyük harf, noktalama, ortalama kelime uzunluğu
-- **Birleşik Özellik Seti**: TF-IDF + metrikler
+### Advanced Feature Extraction
+- **TF-IDF Vectorization**: 12,000 features, (1,3) ngram range
+- **Metric Features**: Word count, character count, sentence count, uppercase count, punctuation count, average word length
+- **Combined Feature Set**: TF-IDF + metrics
 
-### Akıllı Veri Temizleme
-- URL, e-posta, sayı temizleme
-- Türkçe stopwords filtresi
-- Özel karakter normalizasyonu
-- Minimum metin uzunluğu kontrolü
+### Smart Data Cleaning
+- URL, email, number removal
+- Turkish stopwords filter
+- Special character normalization
+- Minimum text length control
 
-### Model Algoritmaları
-- **Naive Bayes**: Hızlı baseline
-- **Logistic Regression**: Dengeli performans
-- **Random Forest**: Ensemble (50 ağaç)
-- **Linear SVM**: Hızlı ve etkili
+### Model Algorithms
+- **Naive Bayes**: Fast baseline
+- **Logistic Regression**: Balanced performance
+- **Random Forest**: Ensemble (50 trees)
+- **Linear SVM**: Fast and effective
 - **XGBoost**: Gradient boosting
 
-### Performans
-- **Eğitim Süresi**: 3-5 dakika
-- **Class Weights**: Veri dengesizliği yönetimi
-- **Optimize Hiperparametreler**: Hız ve performans dengesi
+### Performance
+- **Training Time**: 3-5 minutes
+- **Class Weights**: Data imbalance management
+- **Optimized Hyperparameters**: Speed and performance balance
 
-### Değerlendirme
+### Evaluation
 - Accuracy, F1-Macro, Precision-Macro, Recall-Macro
-- Normalize confusion matrix
-- En çok karıştırılan kategoriler analizi
+- Normalized confusion matrix
+- Most confused categories analysis
 - Feature importance
 
-## Model Dosyaları
+## Model Files
 
-Model eğitim sonrası `model/` klasörüne kaydedilir:
+After training, the model is saved in the `model/` folder:
 
-- `mail_model_advanced.pkl` - Eğitilmiş model
-- `mail_vectorizer_advanced.pkl` - TF-IDF vektörizer
-- `scaler_advanced.pkl` - Standart normalizasyon
-- `temizleyici_advanced.pkl` - Metin temizleyici
-- `metrik_cikarici_advanced.pkl` - Metrik çıkarıcı
-- `label_to_id_advanced.npy` - Label eşleştirmesi
-- `id_to_label_advanced.npy` - Ters eşleştirme
-- `metrikler_advanced.json` - Performans metrikleri
-- `ozellik_onemleri.csv` - En önemli özellikler
-- `confusion_matrix_advanced.png` - Karışıklık matrisi
+- `mail_model_advanced.pkl` - Trained model
+- `mail_vectorizer_advanced.pkl` - TF-IDF vectorizer
+- `scaler_advanced.pkl` - Standard normalization
+- `temizleyici_advanced.pkl` - Text cleaner
+- `metrik_cikarici_advanced.pkl` - Metric extractor
+- `label_to_id_advanced.npy` - Label mapping
+- `id_to_label_advanced.npy` - Reverse mapping
+- `metrikler_advanced.json` - Performance metrics
+- `ozellik_onemleri.csv` - Most important features
+- `confusion_matrix_advanced.png` - Confusion matrix
 
-## Güvenlik
+## Security
 
-- ✅ API key `.env` dosyasında saklanır
-- ✅ `.env` dosyası `.gitignore` listesinde
-- ✅ Özel bilgileriniz Git'e yüklenmez
+- ✅ API key stored in `.env` file
+- ✅ `.env` file in `.gitignore` list
+- ✅ Your personal information is not uploaded to Git
 
-## Gereksinimler
+## Requirements
 
 - Python 3.8+
 - google-generativeai
@@ -209,8 +211,8 @@ Model eğitim sonrası `model/` klasörüne kaydedilir:
 - xgboost
 - python-dotenv
 
-Tüm bağımlılıklar `requirements.txt` dosyasında listelenmiştir.
+All dependencies are listed in the `requirements.txt` file.
 
-## Lisans
+## License
 
-Bu proje eğitim amaçlı geliştirilmiştir.
+This project was developed for educational purposes.
