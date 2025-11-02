@@ -57,6 +57,8 @@ mailler_*.csv
 
 # Source files - Üretim kodları (Hassas bilgiler içerebilir)
 mail_generator.py
+main.py
+mail_classifier_tester
 
 # Backup files
 backup/
