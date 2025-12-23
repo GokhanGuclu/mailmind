@@ -5,6 +5,7 @@
 import pandas as pd
 import numpy as np
 import re
+import unicodedata
 from sklearn.base import BaseEstimator, TransformerMixin
 
 from .config import TURKCE_STOPWORDS
@@ -13,9 +14,10 @@ from .config import TURKCE_STOPWORDS
 class MetinTemizleyici(BaseEstimator, TransformerMixin):
     """Metni temizleyen ve normalize eden custom transformer"""
     
-    def __init__(self, remove_stopwords=True, min_length=3):
+    def __init__(self, remove_stopwords=True, min_length=3, turkce_lowercase=True):
         self.remove_stopwords = remove_stopwords
         self.min_length = min_length
+        self.turkce_lowercase = turkce_lowercase
     
     def fit(self, X, y=None):
         return self
@@ -35,8 +37,17 @@ class MetinTemizleyici(BaseEstimator, TransformerMixin):
         if pd.isna(metin):
             return ""
         
-        # Küçük harfe çevir
-        metin = str(metin).lower()
+        metin = str(metin)
+        # Unicode normalize (kombinasyon karakterlerini sadeleştirmek için)
+        metin = unicodedata.normalize("NFKC", metin)
+        
+        # Küçük harfe çevir (Türkçe I/İ uyumlu)
+        if self.turkce_lowercase:
+            metin = metin.replace("İ", "i").replace("I", "ı").lower()
+            # Bazı ortamlarda "İ" -> "i̇" (i + combining dot) kalabilir, düzelt
+            metin = metin.replace("i̇", "i")
+        else:
+            metin = metin.lower()
         
         # URL'leri kaldır
         metin = re.sub(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', ' ', metin)
@@ -49,6 +60,8 @@ class MetinTemizleyici(BaseEstimator, TransformerMixin):
         
         # Özel karakterleri temizle (Türkçe karakterler hariç)
         metin = re.sub(r'[^\w\sçğıöşüÇĞIİÖŞÜ]', ' ', metin)
+        # Altçizgi (underscore) çoğu zaman gürültü; boşluk yap
+        metin = metin.replace("_", " ")
         
         # Tekrar eden boşlukları temizle
         metin = re.sub(r'\s+', ' ', metin)

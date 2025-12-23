@@ -31,7 +31,7 @@ TURKCE_STOPWORDS = {
     'olacak', 'olarak', 'olsa', 'olur', 'olmak', 'etmek', 'etmiş', 'etmişti',
     'gelmek', 'gelen', 'gelmiş', 'gidecek', 'gidiyor', 'yapmak', 'yapan',
     'yapılan', 'yapılacak', 'daha', 'çok', 'az', 'en', 'bir', 'iki', 'üç',
-    'dört', 'beş', 'alışveriş', 'eğitim', 'kişisel', 'iş', 'sağlık', 'kategori'
+    'dört', 'beş'
 }
 
 # Model hiperparametreleri

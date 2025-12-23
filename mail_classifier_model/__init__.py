@@ -32,6 +32,7 @@ from .model_trainer import (
 )
 from .model_manager import model_kaydet, model_yukle
 from .predictor import tahmin_yap
+from .vectorizers import DualTfidfVectorizer
 
 __version__ = "1.0.0"
 __author__ = "Mail Classifier Team"
@@ -66,6 +67,8 @@ __all__ = [
     'model_kaydet',
     'model_yukle',
     # Prediction
-    'tahmin_yap'
+    'tahmin_yap',
+    # Vectorizers
+    'DualTfidfVectorizer'
 ]
 

@@ -40,11 +40,11 @@ def veri_yukle(csv_dosyasi=None):
     # NaN değerleri temizle
     df = df.dropna(subset=['Kategori', 'Başlık', 'İçerik'])
     
-    # Başlık ve İçeriği birleştir
-    df['Mail_Metni'] = df['Başlık'] + " " + df['İçerik']
+    # Başlık ve İçeriği birleştir (ham metin)
+    df['Mail_Metni'] = df['Başlık'].astype(str) + " " + df['İçerik'].astype(str)
     
-    # Metni temizle
-    temizleyici = MetinTemizleyici(remove_stopwords=True, min_length=3)
+    # Metni temizle (TF-IDF bunun üzerinden üretilecek)
+    temizleyici = MetinTemizleyici(remove_stopwords=True, min_length=3, turkce_lowercase=True)
     df['Mail_Metni_Temiz'] = temizleyici.transform(df['Mail_Metni'].values)
     
     # Boş metinleri çıkar
@@ -55,9 +55,10 @@ def veri_yukle(csv_dosyasi=None):
     X = df['Mail_Metni_Temiz'].values
     y = df['Kategori'].values
     
-    # Metrikler
+    # Metrikler (ham metinden çıkarmak daha anlamlı: büyük harf/noktalama vb.)
     metrik_cikarici = MetrikCikarici()
-    X_metrikler = metrik_cikarici.transform(X)
+    ham_ikili = list(zip(df['Başlık'].astype(str).values, df['İçerik'].astype(str).values))
+    X_metrikler = metrik_cikarici.transform(ham_ikili)
     
     print(f"\nTemizlenmiş veri sayısı: {len(X)}")
     print(f"Kategori sayısı: {len(np.unique(y))}")

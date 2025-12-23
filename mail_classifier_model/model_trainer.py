@@ -10,9 +10,9 @@ import seaborn as sns
 from datetime import datetime
 from time import time
 from sklearn.model_selection import train_test_split
-from sklearn.feature_extraction.text import TfidfVectorizer
+from scipy import sparse as sp
+from sklearn.calibration import CalibratedClassifierCV
 from sklearn.naive_bayes import MultinomialNB
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import LinearSVC
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
@@ -21,7 +21,9 @@ from sklearn.metrics import (accuracy_score, classification_report, confusion_ma
 import xgboost as xgb
 
 from .config import (DEFAULT_NGRAM_RANGE, DEFAULT_MAX_FEATURES,
+                     DEFAULT_MIN_DF, DEFAULT_MAX_DF,
                      METRIKLER_DOSYASI, OZELLIK_ONEM_DOSYASI)
+from .vectorizers import DualTfidfVectorizer
 
 
 def model_olustur(ngram_range=None, max_features=None):
@@ -40,11 +42,13 @@ def model_olustur(ngram_range=None, max_features=None):
     if max_features is None:
         max_features = DEFAULT_MAX_FEATURES
         
+    # Geriye dönük uyumluluk için tutuluyor (tek TF-IDF isteyenler)
+    from sklearn.feature_extraction.text import TfidfVectorizer
     return TfidfVectorizer(
         max_features=max_features,
         ngram_range=ngram_range,
-        min_df=2,
-        max_df=0.95,
+        min_df=DEFAULT_MIN_DF,
+        max_df=DEFAULT_MAX_DF,
         sublinear_tf=True
     )
 
@@ -72,8 +76,17 @@ def model_karsilastir(X, y, X_metrikler, temizleyici, metrik_cikarici):
         X, y, X_metrikler, test_size=0.2, random_state=42, stratify=y
     )
     
-    # Vectorizer (performans ve hız dengesi)
-    vectorizer = model_olustur(ngram_range=(1, 3), max_features=12000)
+    # Vectorizer: kelime + char n-gram (temiz metin üzerinden)
+    # Char n-gram özellikle benzer kategorilerde (Sosyal Medya vs Güvenlik/Uyarı gibi) ayrımı güçlendirir.
+    vectorizer = DualTfidfVectorizer(
+        word_max_features=DEFAULT_MAX_FEATURES,
+        word_ngram_range=DEFAULT_NGRAM_RANGE,
+        char_max_features=8000,
+        char_ngram_range=(3, 5),
+        min_df=DEFAULT_MIN_DF,
+        max_df=DEFAULT_MAX_DF,
+        sublinear_tf=True,
+    )
     
     X_train_tfidf = vectorizer.fit_transform(X_train)
     X_test_tfidf = vectorizer.transform(X_test)
@@ -83,9 +96,11 @@ def model_karsilastir(X, y, X_metrikler, temizleyici, metrik_cikarici):
     X_train_met = scaler.fit_transform(X_train_met)
     X_test_met = scaler.transform(X_test_met)
     
-    # TF-IDF ve metrikleri birleştir
-    X_train_combined = np.hstack([X_train_tfidf.toarray(), X_train_met])
-    X_test_combined = np.hstack([X_test_tfidf.toarray(), X_test_met])
+    # TF-IDF (sparse) ve metrikleri (dense) birleştir (sparse kalacak şekilde)
+    X_train_met_sparse = sp.csr_matrix(X_train_met)
+    X_test_met_sparse = sp.csr_matrix(X_test_met)
+    X_train_combined = sp.hstack([X_train_tfidf, X_train_met_sparse], format="csr")
+    X_test_combined = sp.hstack([X_test_tfidf, X_test_met_sparse], format="csr")
     
     print(f"\nToplam özellik sayısı: {X_train_combined.shape[1]}")
     print(f"  - TF-IDF özellikleri: {X_train_tfidf.shape[1]}")
@@ -101,7 +116,6 @@ def model_karsilastir(X, y, X_metrikler, temizleyici, metrik_cikarici):
     modeller = {
         'Naive Bayes': MultinomialNB(alpha=0.1),
         'Logistic Regression': LogisticRegression(random_state=42, max_iter=300, class_weight='balanced', n_jobs=-1),
-        'Random Forest': RandomForestClassifier(n_estimators=50, random_state=42, n_jobs=-1, class_weight='balanced', max_depth=30),
         'Linear SVM': LinearSVC(random_state=42, class_weight='balanced', max_iter=1000, dual=False),
         'XGBoost': xgb.XGBClassifier(random_state=42, n_jobs=-1, eval_metric='mlogloss', n_estimators=50, max_depth=5)
     }
@@ -131,12 +145,21 @@ def model_karsilastir(X, y, X_metrikler, temizleyici, metrik_cikarici):
             X_train_res, y_train_res = X_train_combined, y_train_current
         
         # Modeli eğit
-        model.fit(X_train_res, y_train_res)
+        model_to_fit = model
+        # Olasılık vermeyen modeller için kalibrasyon (güven skorunu daha anlamlı yapar)
+        if not hasattr(model_to_fit, 'predict_proba') and hasattr(model_to_fit, 'decision_function'):
+            try:
+                model_to_fit = CalibratedClassifierCV(estimator=model_to_fit, method='sigmoid', cv=3)
+            except TypeError:
+                # Eski sklearn sürümleri için
+                model_to_fit = CalibratedClassifierCV(base_estimator=model_to_fit, method='sigmoid', cv=3)
+
+        model_to_fit.fit(X_train_res, y_train_res)
         fit_time = time() - start_time
         print(f"  Eğitim süresi: {fit_time:.2f} saniye")
         
         # Tahmin yap
-        y_pred = model.predict(X_test_model)
+        y_pred = model_to_fit.predict(X_test_model)
         
         # XGBoost tahminlerini label'a çevir
         if isim == 'XGBoost':
@@ -155,7 +178,7 @@ def model_karsilastir(X, y, X_metrikler, temizleyici, metrik_cikarici):
         recall_macro = recall_score(y_test, y_pred_labels, average='macro')
         
         sonuclar[isim] = {
-            'model': model,
+            'model': model_to_fit,
             'accuracy': accuracy,
             'f1_macro': f1_macro,
             'precision_macro': precision_macro,

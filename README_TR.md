@@ -86,6 +86,26 @@ python mail_generator.py
 python mail_classifier_advanced.py
 ```
 
+Temizlenmiş veri setiyle eğitmek için:
+
+```bash
+python mail_classifier_advanced.py --csv "mailler_clean.csv"
+```
+
+### 2.1. Veri Seti Temizleme (Veri Madenciliği için)
+
+Mevcut CSV’den (ör. `mailler copy.csv`) **temizlenmiş yeni bir veri seti** üretmek için:
+
+```bash
+python preprocess_dataset.py --input "mailler copy.csv" --output "mailler_clean.csv"
+```
+
+TF-IDF matrisini de üretmek isterseniz:
+
+```bash
+python preprocess_dataset.py --input "mailler copy.csv" --output "mailler_clean.csv" --export-tfidf --tfidf-dir model
+```
+
 **Çıktı:**
 - ⭐ 5 farklı model karşılaştırması (Naive Bayes, Logistic Regression, Random Forest, SVM, XGBoost)
 - ⚡ Hız: 3-5 dakika

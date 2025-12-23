@@ -5,8 +5,10 @@ Model kaydetme ve yükleme fonksiyonları
 import os
 import sys
 import joblib
+import numpy as np
 from .config import (MODEL_DIR, MODEL_DOSYASI, VECTORIZER_DOSYASI, SCALER_DOSYASI,
                      TEMIZLEYICI_DOSYASI, METRIK_CIKARICI_DOSYASI)
+from .config import LABEL_TO_ID_DOSYASI, ID_TO_LABEL_DOSYASI
 
 
 def model_kaydet(model, vectorizer, scaler, temizleyici, metrik_cikarici):
@@ -55,7 +57,21 @@ def model_yukle():
         scaler = joblib.load(SCALER_DOSYASI)
         temizleyici = joblib.load(TEMIZLEYICI_DOSYASI)
         metrik_cikarici = joblib.load(METRIK_CIKARICI_DOSYASI)
-        return model, vectorizer, scaler, temizleyici, metrik_cikarici
+        # Try to load label mappings if present
+        id_to_label = None
+        label_to_id = None
+        try:
+            if os.path.exists(ID_TO_LABEL_DOSYASI):
+                id_to_label = np.load(ID_TO_LABEL_DOSYASI, allow_pickle=True).item()
+            if os.path.exists(LABEL_TO_ID_DOSYASI):
+                label_to_id = np.load(LABEL_TO_ID_DOSYASI, allow_pickle=True).item()
+        except Exception:
+            # If loading mappings fails, continue without them
+            id_to_label = None
+            label_to_id = None
+
+        # Return components plus optional mappings
+        return model, vectorizer, scaler, temizleyici, metrik_cikarici, id_to_label, label_to_id
     except FileNotFoundError as e:
         print(f"Model bulunamadı! Önce eğitim yapmalısınız. Hata: {e}")
         return None, None, None, None, None
