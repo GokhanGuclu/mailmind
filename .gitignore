@@ -72,10 +72,6 @@ rpd_counter.json
 # Temporary files
 *.tmp
 
-verimadenrapor.docx
-TEKNIK_NOTLAR.txt
-RAPOR_JOCACS_SABLON.txt
-JOCACS.docx
-model_result/
-testler/
-datasets/
+mailmind-model/model_result/
+mailmind-model/testler/
+mailmind-model/datasets/
