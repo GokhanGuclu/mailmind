@@ -215,6 +215,15 @@ Model eğitim sonrası `model/` klasörüne kaydedilir:
 - `ozellik_onemleri.csv` - En önemli özellikler
 - `confusion_matrix_advanced.png` - Karışıklık matrisi
 
+Ek olarak, rapor ve grafik çıktıları `model_result/` klasörüne yazılır:
+
+- `model_comparison_metrics.csv` / `model_comparison_metrics.json` - Tüm modellerin metrik karşılaştırması
+- `model_comparison_f1_macro.png` - Modellerin F1-Macro bar grafiği
+- `classification_report.csv` / `classification_report.json` - En iyi model için sınıf bazlı metrikler
+- `per_class_f1.png` - Sınıf bazlı F1 bar grafiği
+- `confusion_matrix_raw.csv` - Ham confusion matrix
+- `confusion_matrix_normalized.png` - Normalize confusion matrix (kopya)
+
 ## Güvenlik
 
 - ✅ API key `.env` dosyasında saklanır

@@ -12,6 +12,7 @@ _proje_koku = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CSV_DOSYASI = os.path.join(_proje_koku, "mailler.csv")
 
 MODEL_DIR = os.path.join(_proje_koku, "model")
+RESULT_DIR = os.path.join(_proje_koku, "model_result")
 MODEL_DOSYASI = os.path.join(MODEL_DIR, "mail_model_advanced.pkl")
 VECTORIZER_DOSYASI = os.path.join(MODEL_DIR, "mail_vectorizer_advanced.pkl")
 SCALER_DOSYASI = os.path.join(MODEL_DIR, "scaler_advanced.pkl")

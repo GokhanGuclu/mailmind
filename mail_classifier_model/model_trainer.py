@@ -7,6 +7,7 @@ import json
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import os
 from datetime import datetime
 from time import time
 from sklearn.model_selection import train_test_split
@@ -22,7 +23,8 @@ import xgboost as xgb
 
 from .config import (DEFAULT_NGRAM_RANGE, DEFAULT_MAX_FEATURES,
                      DEFAULT_MIN_DF, DEFAULT_MAX_DF,
-                     METRIKLER_DOSYASI, OZELLIK_ONEM_DOSYASI)
+                     METRIKLER_DOSYASI, OZELLIK_ONEM_DOSYASI,
+                     RESULT_DIR)
 from .vectorizers import DualTfidfVectorizer
 
 
@@ -216,13 +218,69 @@ def model_karsilastir(X, y, X_metrikler, temizleyici, metrik_cikarici):
     
     with open(METRIKLER_DOSYASI, 'w', encoding='utf-8') as f:
         json.dump(metrikler_dict, f, ensure_ascii=False, indent=2)
+
+    # Sonuç klasörü (raporlar/grafikler)
+    os.makedirs(RESULT_DIR, exist_ok=True)
+
+    # Tüm modellerin karşılaştırma metrikleri (csv/json)
+    summary_rows = []
+    for isim, s in sonuclar.items():
+        summary_rows.append({
+            "model": isim,
+            "accuracy": float(s["accuracy"]),
+            "f1_macro": float(s["f1_macro"]),
+            "precision_macro": float(s["precision_macro"]),
+            "recall_macro": float(s["recall_macro"]),
+        })
+    df_summary = pd.DataFrame(summary_rows).sort_values("f1_macro", ascending=False)
+    df_summary.to_csv(os.path.join(RESULT_DIR, "model_comparison_metrics.csv"), index=False, encoding="utf-8-sig")
+    with open(os.path.join(RESULT_DIR, "model_comparison_metrics.json"), "w", encoding="utf-8") as f:
+        json.dump(summary_rows, f, ensure_ascii=False, indent=2)
+
+    # Model karşılaştırma grafiği (F1-Macro)
+    plt.figure(figsize=(10, 5))
+    sns.barplot(data=df_summary, x="model", y="f1_macro", color="#4C78A8")
+    plt.title("Model Karşılaştırma - F1 Macro")
+    plt.ylabel("F1 Macro")
+    plt.xlabel("Model")
+    plt.xticks(rotation=25, ha="right")
+    plt.tight_layout()
+    plt.savefig(os.path.join(RESULT_DIR, "model_comparison_f1_macro.png"), dpi=250, bbox_inches="tight")
+    plt.close()
     
     # En iyi model için detaylı değerlendirme
     print("\nDetaylı Sınıflandırma Raporu:")
     print(classification_report(y_test, en_iyi_sonuc['y_pred']))
+
+    # Classification report'u dosyaya yaz (csv/json)
+    report_dict = classification_report(y_test, en_iyi_sonuc["y_pred"], output_dict=True)
+    df_report = pd.DataFrame(report_dict).transpose()
+    df_report.to_csv(os.path.join(RESULT_DIR, "classification_report.csv"), encoding="utf-8-sig")
+    with open(os.path.join(RESULT_DIR, "classification_report.json"), "w", encoding="utf-8") as f:
+        json.dump(report_dict, f, ensure_ascii=False, indent=2)
+
+    # Sınıf bazlı F1 grafiği
+    # (support/accuracy satırlarını çıkar)
+    df_f1 = df_report.copy()
+    df_f1 = df_f1[~df_f1.index.isin(["accuracy", "macro avg", "weighted avg"])].copy()
+    if "f1-score" in df_f1.columns:
+        df_f1 = df_f1.sort_values("f1-score", ascending=False)
+        plt.figure(figsize=(10, 6))
+        sns.barplot(x=df_f1.index, y=df_f1["f1-score"], color="#59A14F")
+        plt.title(f"Sınıf Bazlı F1 Skoru - {en_iyi_isim}")
+        plt.ylabel("F1")
+        plt.xlabel("Kategori")
+        plt.xticks(rotation=35, ha="right")
+        plt.tight_layout()
+        plt.savefig(os.path.join(RESULT_DIR, "per_class_f1.png"), dpi=250, bbox_inches="tight")
+        plt.close()
     
     # Confusion Matrix
     cm = confusion_matrix(y_test, en_iyi_sonuc['y_pred'])
+    # Confusion matrix CSV
+    labels_sorted = np.unique(y)
+    df_cm = pd.DataFrame(cm, index=labels_sorted, columns=labels_sorted)
+    df_cm.to_csv(os.path.join(RESULT_DIR, "confusion_matrix_raw.csv"), encoding="utf-8-sig")
     
     # Confusion Matrix görselleştirme
     plt.figure(figsize=(14, 12))
@@ -238,6 +296,8 @@ def model_karsilastir(X, y, X_metrikler, temizleyici, metrik_cikarici):
     plt.yticks(rotation=0)
     plt.tight_layout()
     plt.savefig('confusion_matrix_advanced.png', dpi=300, bbox_inches='tight')
+    plt.savefig(os.path.join(RESULT_DIR, "confusion_matrix_normalized.png"), dpi=300, bbox_inches="tight")
+    plt.close()
     print("\nConfusion Matrix 'confusion_matrix_advanced.png' olarak kaydedildi.")
     
     # En çok karıştırılan kategoriler
