@@ -1,0 +1,65 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model IntegrationsGoogleAccount {
+  id        String   @id @default(cuid())
+  userId    String
+  user      IamUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  googleEmail String
+  scopes      String  // space-delimited scopes (simple for MVP)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tokens IntegrationsGoogleToken?
+
+  @@unique([userId, googleEmail])
+}
+
+model IntegrationsGoogleToken {
+  id              String   @id @default(cuid())
+  googleAccountId String   @unique
+  googleAccount   IntegrationsGoogleAccount @relation(fields: [googleAccountId], references: [id], onDelete: Cascade)
+
+  accessTokenEnc  String
+  refreshTokenEnc String
+  expiresAt       DateTime
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model IamUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sessions      IamSession[]
+  googleAccounts IntegrationsGoogleAccount[]
+}
+
+model IamSession {
+  id               String   @id @default(cuid())
+  userId           String
+  user             IamUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  refreshTokenHash String
+  createdAt        DateTime @default(now())
+  expiresAt        DateTime
+  revokedAt        DateTime?
+
+  userAgent        String?
+  ip               String?
+  replacedById     String?  // rotation: yeni session id referansı
+
+  @@index([userId])
+  @@index([expiresAt])
+}
