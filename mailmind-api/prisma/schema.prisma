@@ -96,6 +96,8 @@ model MailboxAccount {
 
   syncJobs MailboxSyncJob[]
 
+  messages MailboxMessage[]
+
   @@unique([provider, email])
   @@index([userId])
 }
@@ -159,4 +161,24 @@ model MailboxSyncJob {
   mailboxAccount MailboxAccount @relation(fields: [mailboxAccountId], references: [id], onDelete: Cascade)
 
   @@index([mailboxAccountId, status])
+}
+
+model MailboxMessage {
+  id                String   @id @default(cuid())
+  mailboxAccountId  String
+  providerMessageId String // örn "INBOX:123"
+  folder            String // örn "INBOX"
+  from              String?
+  to                String // MVP: virgülle ayrılmış string
+  subject           String?
+  date              DateTime
+  snippet           String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  mailboxAccount MailboxAccount @relation(fields: [mailboxAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([mailboxAccountId, providerMessageId])
+  @@index([mailboxAccountId, date])
 }

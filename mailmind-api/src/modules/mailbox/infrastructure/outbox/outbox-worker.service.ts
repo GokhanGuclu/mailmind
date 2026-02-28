@@ -1,132 +1,132 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../../../shared/infrastructure/prisma/prisma.service';
+import { MailboxSyncWorkerService } from '../providers/sync/mailbox-sync-worker.service';
 
-type OutboxStatus = 'PENDING' | 'PROCESSING' | 'SENT' | 'FAILED';
+type OutboxEventType = 'MAILBOX_ACCOUNT_CONNECTED' | string;
 
 @Injectable()
-export class OutboxWorkerService implements OnModuleInit, OnModuleDestroy {
+export class OutboxWorkerService implements OnModuleInit {
   private readonly logger = new Logger(OutboxWorkerService.name);
-  private timer: NodeJS.Timeout | null = null;
 
-  // İstersen env ile yönet: OUTBOX_POLL_MS, OUTBOX_BATCH
-  private readonly pollMs = 1500;
-  private readonly batchSize = 20;
+  private interval: NodeJS.Timeout | null = null;
 
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly workersEnabled =
+    (process.env.WORKERS_ENABLED ?? 'true').toLowerCase() === 'true';
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mailboxSyncWorker: MailboxSyncWorkerService,
+  ) {}
 
   onModuleInit() {
-    // Uygulama ayağa kalkınca worker başlar
-    this.timer = setInterval(() => {
-      this.tick().catch((err) => this.logger.error(err?.message ?? err, err?.stack));
-    }, this.pollMs);
+    if (!this.workersEnabled) {
+      this.logger.log('Workers disabled (WORKERS_ENABLED=false). Interval not started.');
+      return;
+    }
 
-    this.logger.log(`Outbox worker started (pollMs=${this.pollMs}, batchSize=${this.batchSize})`);
+    const intervalMs = Number(process.env.OUTBOX_WORKER_INTERVAL_MS ?? 1_000);
+
+    this.interval = setInterval(() => {
+      this.processOnce().catch((err) => {
+        this.logger.error('Outbox worker tick failed', err?.stack ?? String(err));
+      });
+    }, intervalMs);
+
+    this.logger.log(`Outbox worker started (interval=${intervalMs}ms).`);
   }
 
-  onModuleDestroy() {
-    if (this.timer) clearInterval(this.timer);
-    this.timer = null;
-  }
-
-  private async tick() {
-    // 1) PENDING eventleri çek
-    const events = await this.prisma.outboxEvent.findMany({
+  async processOnce(): Promise<void> {
+    const event = await this.prisma.outboxEvent.findFirst({
       where: { status: 'PENDING' },
       orderBy: { createdAt: 'asc' },
-      take: this.batchSize,
-      select: {
-        id: true,
-        type: true,
-        status: true,
-        payload: true,     // <-- ŞART
-        createdAt: true,
-      },
     });
 
-    if (events.length === 0) return;
+    if (!event) return;
 
-    for (const evt of events) {
-      // 2) Claim: aynı event’i iki worker’ın işlememesi için
-      const claimed = await this.prisma.outboxEvent.updateMany({
-        where: { id: evt.id, status: 'PENDING' },
-        data: { status: 'PROCESSING' satisfies OutboxStatus },
+    await this.prisma.outboxEvent.update({
+      where: { id: event.id },
+      data: { status: 'PROCESSING' }, // ✅ startedAt yok
+    });
+
+    try {
+      const type = event.type as OutboxEventType;
+      this.logger.log(`Processing outbox event: ${event.id} (${type})`);
+
+      switch (type) {
+        case 'MAILBOX_ACCOUNT_CONNECTED': {
+          let payload: any = event.payload as any;
+
+          if (typeof payload === 'string') {
+            try {
+              payload = JSON.parse(payload);
+            } catch {
+              // ignore
+            }
+          }
+
+          const mailboxAccountId =
+            payload?.mailboxAccountId ?? payload?.mailboxId ?? payload?.id;
+
+          if (!mailboxAccountId) {
+            throw new Error('MAILBOX_ACCOUNT_CONNECTED payload missing mailboxAccountId');
+          }
+
+          await this.mailboxSyncWorker.enqueueForMailbox(mailboxAccountId);
+          break;
+        }
+
+        default:
+          this.logger.warn(`Unknown outbox event type: ${type}`);
+      }
+
+      await this.prisma.outboxEvent.update({
+        where: { id: event.id },
+        data: { status: 'DONE' }, // ✅ finishedAt yok
+      });
+    } catch (err: any) {
+      await this.prisma.outboxEvent.update({
+        where: { id: event.id },
+        data: {
+          status: 'FAILED',
+        },
       });
 
-      if (claimed.count !== 1) continue; // başka instance kaptı
-
-      try {
-        await this.handleEvent(evt.type, evt.payload);
-
-        await this.prisma.outboxEvent.update({
-          where: { id: evt.id },
-          data: { status: 'SENT', sentAt: new Date() },
-        });
-      } catch (err: any) {
-        this.logger.error(
-          `Outbox event failed id=${evt.id} type=${evt.type} err=${err?.message ?? err}`,
-          err?.stack,
-        );
-
-        await this.prisma.outboxEvent.update({
-          where: { id: evt.id },
-          data: { status: 'FAILED' satisfies OutboxStatus },
-        });
-      }
+      this.logger.error(`Outbox event failed: ${event.id}`, err?.stack ?? String(err));
     }
   }
 
-  private async handleEvent(type: string, payload: any) {
-    // ŞİMDİLİK: işleyici sadece log atıyor.
-    // Bir sonraki modülde burada "sync job" yazacağız.
-    switch (type) {
-      case 'MAILBOX_ACCOUNT_CONNECTED': {
-        this.logger.log(
-          `Handle MAILBOX_ACCOUNT_CONNECTED mailboxAccountId=${payload?.mailboxAccountId} email=${payload?.email}`,
-        );
-        return;
-      }
-      case 'MAILBOX_ACCOUNT_REVOKED': {
-        this.logger.log(
-          `Handle MAILBOX_ACCOUNT_REVOKED mailboxAccountId=${payload?.mailboxAccountId} email=${payload?.email}`,
-        );
-        return;
-      }
-      case 'MAILBOX_ACCOUNT_CONNECTED': {
-        const p =
-          typeof payload === 'string'
-            ? (() => { try { return JSON.parse(payload); } catch { return null; } })()
-            : payload;
+  private async enqueueMailboxSync(mailboxAccountId: string): Promise<void> {
+    // Senin MailboxSyncWorkerService API'si farklı olabilir.
+    // Var olan methodları deniyoruz (hızlı ilerlemek için).
+    const anyWorker = this.mailboxSyncWorker as any;
 
-        const mailboxAccountId = p?.mailboxAccountId as string | undefined;
-        if (!mailboxAccountId) {
-          this.logger.warn(`CONNECTED event missing mailboxAccountId payload=${JSON.stringify(payload)}`);
-          return;
-        }
-
-        const prismaAny = this.prisma as any;
-
-        const existing = await prismaAny.mailboxSyncJob.findFirst({
-          where: { mailboxAccountId, type: 'INITIAL' },
-          select: { id: true },
-        });
-
-        if (!existing) {
-          await prismaAny.mailboxSyncJob.create({
-            data: { mailboxAccountId, type: 'INITIAL', status: 'PENDING' },
-          });
-        }
-
-        this.logger.log(`Queued INITIAL sync job for mailboxAccountId=${mailboxAccountId}`);
-        return;
-      }
-      
-      default:
-        this.logger.warn(`Unknown outbox event type=${type}`);
-        return;
+    if (typeof anyWorker.enqueueForMailbox === 'function') {
+      await anyWorker.enqueueForMailbox(mailboxAccountId);
+      return;
     }
+    if (typeof anyWorker.enqueue === 'function') {
+      await anyWorker.enqueue(mailboxAccountId);
+      return;
+    }
+    if (typeof anyWorker.createJobForMailbox === 'function') {
+      await anyWorker.createJobForMailbox(mailboxAccountId);
+      return;
+    }
+    if (typeof anyWorker.createJob === 'function') {
+      await anyWorker.createJob(mailboxAccountId);
+      return;
+    }
+
+    throw new Error(
+      'MailboxSyncWorkerService has no enqueue method. Add enqueueForMailbox(mailboxAccountId) or expose an equivalent method.',
+    );
   }
 
-  public async processOnce() {
-    await this.tick();
+  stop(): void {
+    if (this.interval) {
+      clearInterval(this.interval);
+      this.interval = null;
+      this.logger.log('Outbox worker stopped.');
+    }
   }
 }
