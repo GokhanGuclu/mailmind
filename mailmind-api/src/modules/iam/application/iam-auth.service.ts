@@ -139,8 +139,10 @@ export class IamAuthService {
   }
 
   async me(userId: string) {
+    if (!userId) throw new UnauthorizedException('Invalid access token payload');
     const user = await this.users.findById(userId);
     if (!user) throw new UnauthorizedException('User not found');
+
     return { id: user.id, email: user.email, createdAt: user.createdAt };
   }
 

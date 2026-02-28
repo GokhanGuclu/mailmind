@@ -8,12 +8,12 @@ datasource db {
 }
 
 model IntegrationsGoogleAccount {
-  id        String   @id @default(cuid())
-  userId    String
-  user      IamUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String  @id @default(cuid())
+  userId String
+  user   IamUser @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   googleEmail String
-  scopes      String  // space-delimited scopes (simple for MVP)
+  scopes      String // space-delimited scopes (simple for MVP)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -23,16 +23,16 @@ model IntegrationsGoogleAccount {
 }
 
 model IntegrationsGoogleToken {
-  id              String   @id @default(cuid())
-  googleAccountId String   @unique
+  id              String                    @id @default(cuid())
+  googleAccountId String                    @unique
   googleAccount   IntegrationsGoogleAccount @relation(fields: [googleAccountId], references: [id], onDelete: Cascade)
 
   accessTokenEnc  String
   refreshTokenEnc String
   expiresAt       DateTime
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model IamUser {
@@ -42,24 +42,121 @@ model IamUser {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  sessions      IamSession[]
+  sessions       IamSession[]
   googleAccounts IntegrationsGoogleAccount[]
+
+  mailboxAccounts MailboxAccount[]
 }
 
 model IamSession {
-  id               String   @id @default(cuid())
-  userId           String
-  user             IamUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String  @id @default(cuid())
+  userId String
+  user   IamUser @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   refreshTokenHash String
-  createdAt        DateTime @default(now())
+  createdAt        DateTime  @default(now())
   expiresAt        DateTime
   revokedAt        DateTime?
 
-  userAgent        String?
-  ip               String?
-  replacedById     String?  // rotation: yeni session id referansı
+  userAgent    String?
+  ip           String?
+  replacedById String? // rotation: yeni session id referansı
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+enum MailProvider {
+  GMAIL
+  OUTLOOK
+  IMAP
+}
+
+enum MailboxAccountStatus {
+  PENDING
+  ACTIVE
+  REVOKED
+  ERROR
+}
+
+model MailboxAccount {
+  id          String               @id @default(cuid())
+  userId      String
+  provider    MailProvider
+  email       String
+  displayName String?
+  status      MailboxAccountStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user IamUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  credentials MailboxCredential?
+
+  syncJobs MailboxSyncJob[]
+
+  @@unique([provider, email])
+  @@index([userId])
+}
+
+model MailboxCredential {
+  id               String @id @default(cuid())
+  mailboxAccountId String @unique
+
+  // OAuth (Gmail/Outlook) veya IMAP secret
+  accessToken    String?
+  refreshToken   String?
+  tokenExpiresAt DateTime?
+
+  imapHost        String?
+  imapPort        Int?
+  imapUsername    String?
+  imapPasswordEnc String? // şimdilik placeholder; sonra encryption
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  mailboxAccount MailboxAccount @relation(fields: [mailboxAccountId], references: [id], onDelete: Cascade)
+}
+
+model OutboxEvent {
+  id        String    @id @default(cuid())
+  type      String
+  payload   Json
+  status    String    @default("PENDING") // PENDING|SENT|FAILED
+  createdAt DateTime  @default(now())
+  sentAt    DateTime?
+}
+
+enum MailboxSyncJobType {
+  INITIAL
+  INCREMENTAL
+}
+
+enum MailboxSyncJobStatus {
+  PENDING
+  RUNNING
+  DONE
+  FAILED
+}
+
+model MailboxSyncJob {
+  id               String               @id @default(cuid())
+  mailboxAccountId String
+  type             MailboxSyncJobType   @default(INITIAL)
+  status           MailboxSyncJobStatus @default(PENDING)
+
+  // sync parametreleri (şimdilik opsiyonel)
+  cursor       String?
+  errorMessage String?
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  startedAt  DateTime?
+  finishedAt DateTime?
+
+  mailboxAccount MailboxAccount @relation(fields: [mailboxAccountId], references: [id], onDelete: Cascade)
+
+  @@index([mailboxAccountId, status])
 }

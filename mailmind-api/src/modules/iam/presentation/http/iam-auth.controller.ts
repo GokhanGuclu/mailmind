@@ -37,10 +37,11 @@ export class IamAuthController {
     await this.auth.logout(body.refreshToken);
     return { ok: true };
   }
-
-  @UseGuards(JwtAccessGuard)
+  
   @Get('me')
-  me(@Req() req: ReqLike) {
-    return this.auth.me(req.user.sub);
+  @UseGuards(JwtAccessGuard)
+  me(@Req() req: any) {
+    const userId = req.user?.id ?? req.user?.sub ?? req.user?.userId;
+    return this.auth.me(userId);
   }
 }
