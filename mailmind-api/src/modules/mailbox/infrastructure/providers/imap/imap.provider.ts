@@ -144,11 +144,6 @@ export class ImapProvider implements MailProvider {
       throw new Error(`IMAP credential not found or missing password for mailboxAccountId=${mailboxAccountId}`);
     }
 
-    // ✅ tek seferlik debug log (sorun çözülünce kaldır)
-    this.logger.log(
-      `IMAP cred mailbox=${mailboxAccountId} host=${cred.imapHost} user=${cred.imapUsername} hasPass=${!!cred.imapPasswordEnc}`,
-    );
-
     return {
       host: cred.imapHost ?? (() => { throw new Error('IMAP host missing'); })(),
       port: Number(cred.imapPort ?? 993),
