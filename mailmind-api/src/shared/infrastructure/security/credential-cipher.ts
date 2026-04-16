@@ -35,9 +35,6 @@ export class CredentialCipher {
   }
 
   decrypt(raw: string): string {
-    // Backward-compat (migration dönemi için):
-    if (raw.startsWith('PLAINTEXT:')) return raw.slice('PLAINTEXT:'.length);
-
     const parts = raw.split(':');
     if (parts.length !== 5 || parts[0] !== 'ENC') throw new Error('Invalid encrypted credential format');
 

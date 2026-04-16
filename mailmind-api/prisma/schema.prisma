@@ -46,6 +46,9 @@ model IamUser {
   googleAccounts IntegrationsGoogleAccount[]
 
   mailboxAccounts MailboxAccount[]
+  aiAnalyses      AiAnalysis[]
+  tasks           Task[]
+  calendarEvents  CalendarEvent[]
 }
 
 model IamSession {
@@ -106,15 +109,22 @@ model MailboxCredential {
   id               String @id @default(cuid())
   mailboxAccountId String @unique
 
-  // OAuth (Gmail/Outlook) veya IMAP secret
+  // OAuth (Gmail/Outlook)
   accessToken    String?
   refreshToken   String?
   tokenExpiresAt DateTime?
 
+  // IMAP
   imapHost        String?
   imapPort        Int?
   imapUsername    String?
-  imapPasswordEnc String? // şimdilik placeholder; sonra encryption
+  imapPasswordEnc String?
+
+  // SMTP
+  smtpHost        String?
+  smtpPort        Int?
+  smtpUsername    String?
+  smtpPasswordEnc String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -126,7 +136,7 @@ model OutboxEvent {
   id        String    @id @default(cuid())
   type      String
   payload   Json
-  status    String    @default("PENDING") // PENDING|SENT|FAILED
+  status    String    @default("PENDING") // PENDING|PROCESSING|SENT|FAILED
   createdAt DateTime  @default(now())
   sentAt    DateTime?
 }
@@ -163,22 +173,120 @@ model MailboxSyncJob {
   @@index([mailboxAccountId, status])
 }
 
+// ─── AI & Productivity ───────────────────────────────────────────────────────
+
+enum AiAnalysisStatus {
+  PENDING
+  PROCESSING
+  DONE
+  FAILED
+}
+
+model AiAnalysis {
+  id               String          @id @default(cuid())
+  userId           String
+  mailboxMessageId String
+  status           AiAnalysisStatus @default(PENDING)
+  model            String?         // örn: "qwen2.5:7b-instruct"
+  summary          String?         // AI'ın ürettiği kısa özet
+  rawResult        Json?           // AI'dan gelen ham yanıt
+  errorMessage     String?
+  processedAt      DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  user    IamUser        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message MailboxMessage @relation(fields: [mailboxMessageId], references: [id], onDelete: Cascade)
+
+  tasks          Task[]
+  calendarEvents CalendarEvent[]
+
+  @@index([userId, status])
+  @@index([mailboxMessageId])
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model Task {
+  id           String       @id @default(cuid())
+  userId       String
+  aiAnalysisId String?      // null → kullanıcı manuel oluşturdu
+  title        String
+  notes        String?
+  dueAt        DateTime?
+  status       TaskStatus   @default(PENDING)
+  priority     TaskPriority @default(MEDIUM)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  user       IamUser     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  aiAnalysis AiAnalysis? @relation(fields: [aiAnalysisId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+  @@index([userId, dueAt])
+}
+
+enum CalendarEventStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+model CalendarEvent {
+  id           String              @id @default(cuid())
+  userId       String
+  aiAnalysisId String?
+  title        String
+  description  String?
+  startAt      DateTime
+  endAt        DateTime?
+  location     String?
+  attendees    String?             // JSON array string: ["a@x.com", "b@x.com"]
+  status       CalendarEventStatus @default(PENDING)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  user       IamUser     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  aiAnalysis AiAnalysis? @relation(fields: [aiAnalysisId], references: [id], onDelete: SetNull)
+
+  @@index([userId, startAt])
+  @@index([userId, status])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 model MailboxMessage {
   id                String   @id @default(cuid())
   mailboxAccountId  String
-  providerMessageId String // örn "INBOX:123"
-  folder            String // örn "INBOX"
+  providerMessageId String
+  folder            String
   from              String?
-  to                String // MVP: virgülle ayrılmış string
+  to                String
   subject           String?
   date              DateTime
   snippet           String?
+  bodyText          String?
+  bodyHtml          String?
+  isRead            Boolean  @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   mailboxAccount MailboxAccount @relation(fields: [mailboxAccountId], references: [id], onDelete: Cascade)
+  aiAnalyses     AiAnalysis[]
 
   @@unique([mailboxAccountId, providerMessageId])
   @@index([mailboxAccountId, date])
+  @@index([mailboxAccountId, isRead])
 }

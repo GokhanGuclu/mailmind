@@ -1,11 +1,13 @@
 export type ProviderMessage = {
-  providerMessageId: string; // IMAP UID gibi
-  folder: string;            // INBOX
+  providerMessageId: string;
+  folder: string;
   from: string;
   to: string[];
   subject: string;
   date: Date;
   snippet?: string;
+  bodyText?: string;
+  bodyHtml?: string;
 };
 
 export interface MailProvider {

@@ -1,11 +1,15 @@
 import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service';
+import { CredentialCipher } from '../../../shared/infrastructure/security/credential-cipher';
 import { CreateMailboxAccountDto } from './dto/create-mailbox-account.dto';
 import { BadRequestException, ForbiddenException, NotFoundException, Injectable, ConflictException } from '@nestjs/common';
 import { ActivateMailboxAccountDto } from './dto/activate-mailbox-account.dto';
 
 @Injectable()
 export class MailboxAccountsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cipher: CredentialCipher,
+  ) {}
 
 
   async activate(userId: string, accountId: string, dto: ActivateMailboxAccountDto) {
@@ -24,9 +28,8 @@ export class MailboxAccountsService {
     }
 
     const tokenExpiresAt = dto.tokenExpiresAt ? new Date(dto.tokenExpiresAt) : null;
-
-    // Şimdilik placeholder (sonra encryption)
-    const imapPasswordEnc = dto.imapPassword ? `PLAINTEXT:${dto.imapPassword}` : null;
+    const imapPasswordEnc = dto.imapPassword ? this.cipher.encrypt(dto.imapPassword) : null;
+    const smtpPasswordEnc = dto.smtpPassword ? this.cipher.encrypt(dto.smtpPassword) : null;
 
     return this.prisma.$transaction(async (tx) => {
       await tx.mailboxCredential.upsert({
@@ -40,6 +43,10 @@ export class MailboxAccountsService {
           imapPort: dto.imapPort ?? null,
           imapUsername: dto.imapUsername ?? null,
           imapPasswordEnc,
+          smtpHost: dto.smtpHost ?? null,
+          smtpPort: dto.smtpPort ?? null,
+          smtpUsername: dto.smtpUsername ?? null,
+          smtpPasswordEnc,
         },
         update: {
           accessToken: dto.accessToken ?? undefined,
@@ -49,6 +56,10 @@ export class MailboxAccountsService {
           imapPort: dto.imapPort ?? undefined,
           imapUsername: dto.imapUsername ?? undefined,
           imapPasswordEnc: imapPasswordEnc ?? undefined,
+          smtpHost: dto.smtpHost ?? undefined,
+          smtpPort: dto.smtpPort ?? undefined,
+          smtpUsername: dto.smtpUsername ?? undefined,
+          smtpPasswordEnc: smtpPasswordEnc ?? undefined,
         },
       });
 

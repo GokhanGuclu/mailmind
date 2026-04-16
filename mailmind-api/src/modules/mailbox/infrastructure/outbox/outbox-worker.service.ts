@@ -18,6 +18,7 @@ export class OutboxWorkerService implements OnModuleInit {
     private readonly mailboxSyncWorker: MailboxSyncWorkerService,
   ) {}
 
+
   onModuleInit() {
     if (!this.workersEnabled) {
       this.logger.log('Workers disabled (WORKERS_ENABLED=false). Interval not started.');
@@ -43,10 +44,16 @@ export class OutboxWorkerService implements OnModuleInit {
 
     if (!event) return;
 
-    await this.prisma.outboxEvent.update({
-      where: { id: event.id },
-      data: { status: 'PROCESSING' }, // ✅ startedAt yok
+    // ✅ atomic claim: sadece hala PENDING ise PROCESSING'e geçir
+    const claimed = await this.prisma.outboxEvent.updateMany({
+      where: { id: event.id, status: 'PENDING' },
+      data: { status: 'PROCESSING' },
     });
+
+    if (claimed.count !== 1) {
+      // başka bir worker kapmış
+      return;
+    }
 
     try {
       const type = event.type as OutboxEventType;
@@ -54,24 +61,31 @@ export class OutboxWorkerService implements OnModuleInit {
 
       switch (type) {
         case 'MAILBOX_ACCOUNT_CONNECTED': {
-          let payload: any = event.payload as any;
-
-          if (typeof payload === 'string') {
-            try {
-              payload = JSON.parse(payload);
-            } catch {
-              // ignore
-            }
-          }
-
-          const mailboxAccountId =
-            payload?.mailboxAccountId ?? payload?.mailboxId ?? payload?.id;
-
-          if (!mailboxAccountId) {
-            throw new Error('MAILBOX_ACCOUNT_CONNECTED payload missing mailboxAccountId');
-          }
-
+          const payload: any = event.payload;
+          const mailboxAccountId = payload?.mailboxAccountId ?? payload?.mailboxId ?? payload?.id;
+          if (!mailboxAccountId) throw new Error('MAILBOX_ACCOUNT_CONNECTED: missing mailboxAccountId');
           await this.mailboxSyncWorker.enqueueForMailbox(mailboxAccountId);
+          break;
+        }
+
+        case 'MESSAGE_SYNCED': {
+          const payload: any = event.payload;
+          const { userId, messageIds } = payload as { userId: string; messageIds: string[] };
+
+          if (!userId || !Array.isArray(messageIds) || messageIds.length === 0) {
+            throw new Error('MESSAGE_SYNCED: missing userId or messageIds');
+          }
+
+          // Her yeni mesaj için AiAnalysis kaydı aç (PENDING)
+          await this.prisma.$transaction(
+            messageIds.map((mailboxMessageId) =>
+              this.prisma.aiAnalysis.create({
+                data: { userId, mailboxMessageId, status: 'PENDING' },
+              }),
+            ),
+          );
+
+          this.logger.log(`Created ${messageIds.length} AiAnalysis records for userId=${userId}`);
           break;
         }
 

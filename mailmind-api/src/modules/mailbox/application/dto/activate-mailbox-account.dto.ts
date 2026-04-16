@@ -31,4 +31,22 @@ export class ActivateMailboxAccountDto {
   @IsOptional()
   @IsString()
   imapPassword?: string;
+
+  // SMTP
+  @IsOptional()
+  @IsString()
+  smtpHost?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  smtpPort?: number;
+
+  @IsOptional()
+  @IsString()
+  smtpUsername?: string;
+
+  @IsOptional()
+  @IsString()
+  smtpPassword?: string;
 }

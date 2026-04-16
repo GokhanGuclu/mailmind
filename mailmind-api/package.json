@@ -17,7 +17,7 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "cross-env WORKERS_ENABLED=false jest --config ./test/jest-e2e.json"
+    "test:e2e": "cross-env WORKERS_ENABLED=false jest --config ./test/jest-e2e.json --runInBand"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -25,6 +25,7 @@
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/platform-express": "^11.0.1",
     "@prisma/client": "^6.19.2",
+    "@types/nodemailer": "^8.0.0",
     "argon2": "^0.44.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
@@ -32,6 +33,8 @@
     "imapflow": "^1.2.10",
     "jsonwebtoken": "^9.0.3",
     "mailparser": "^3.9.3",
+    "nodemailer": "^8.0.5",
+    "openai": "^6.34.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },

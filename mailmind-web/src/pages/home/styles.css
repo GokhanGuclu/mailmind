@@ -1,0 +1,226 @@
+.home-page {
+  background: var(--bg-1);
+}
+
+.home-card-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  padding: 16px 0 0;
+  gap: 20px;
+}
+
+.home-card {
+  width: min(1160px, 96%);
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  padding: 52px;
+  text-align: center;
+}
+
+.home-card-hero .home-main-title {
+  font-size: clamp(2rem, 5.2vw, 4.25rem);
+  margin: 0 0 18px;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  font-weight: 700;
+}
+
+.home-main-title-part {
+  color: var(--text);
+}
+
+.home-main-title-accent {
+  color: var(--accent);
+}
+
+.home-hero-lead {
+  color: var(--muted);
+  margin: 0 0 32px;
+  max-width: 640px;
+  font-size: 1.05rem;
+  line-height: 1.65;
+  margin-inline: auto;
+}
+
+.home-main {
+  max-width: 900px;
+  margin-inline: auto;
+}
+
+.home-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.home-btn {
+  text-decoration: none;
+  border-radius: 4px;
+  min-height: 54px;
+  padding: 16px 28px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border: 1px solid transparent;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.home-btn.primary {
+  background-color: var(--accent);
+  color: #fff;
+  font-size: 17px;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #fff 28%, transparent);
+}
+
+.home-btn.secondary {
+  background-color: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  font-size: 16px;
+  padding-inline: 24px;
+}
+
+.home-btn:hover {
+  transform: translateY(-1px);
+}
+
+.home-why-heading {
+  margin: 0 0 12px;
+  font-size: 1.75rem;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.home-why-lead {
+  margin: 0 auto;
+  max-width: 560px;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.home-features {
+  margin-top: 36px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  text-align: left;
+}
+
+.home-feature-card {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 22px 20px 20px;
+  background: color-mix(in srgb, var(--surface) 92%, var(--bg-1));
+}
+
+.home-feature-icon-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 14px;
+}
+
+.home-feature-icon-wrap--a {
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+  color: var(--accent);
+}
+
+.home-feature-icon-wrap--b {
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  color: var(--accent);
+}
+
+.home-feature-icon-wrap--c {
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  color: var(--accent);
+}
+
+.home-feature-icon {
+  flex-shrink: 0;
+}
+
+.home-feature-card-title {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+  color: var(--text);
+}
+
+.home-feature-card-desc {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.home-cta-strip {
+  width: min(1160px, 96%);
+  border-radius: 6px;
+  padding: 40px 32px;
+  text-align: center;
+  background: var(--accent);
+  color: #fff;
+  border: 2px solid color-mix(in srgb, var(--accent) 70%, #000);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #fff 18%, transparent);
+}
+
+.home-cta-title {
+  margin: 0 0 10px;
+  font-size: 1.6rem;
+  letter-spacing: -0.02em;
+}
+
+.home-cta-lead {
+  margin: 0 auto 22px;
+  max-width: 480px;
+  font-size: 1rem;
+  line-height: 1.55;
+  opacity: 0.95;
+}
+
+.home-btn-cta-inverse {
+  background: #fff;
+  color: var(--accent);
+  font-size: 16px;
+  box-shadow: none;
+}
+
+.home-btn-cta-inverse:hover {
+  opacity: 0.95;
+}
+
+.home-page .page-footer {
+  margin-top: auto;
+  flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+  .home-features {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .home-card {
+    padding: 28px;
+  }
+
+  .home-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .home-cta-strip {
+    padding: 28px 20px;
+  }
+}
