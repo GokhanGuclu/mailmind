@@ -49,6 +49,7 @@ model IamUser {
   aiAnalyses      AiAnalysis[]
   tasks           Task[]
   calendarEvents  CalendarEvent[]
+  drafts          MailDraft[]
 }
 
 model IamSession {
@@ -100,6 +101,7 @@ model MailboxAccount {
   syncJobs MailboxSyncJob[]
 
   messages MailboxMessage[]
+  drafts   MailDraft[]
 
   @@unique([provider, email])
   @@index([userId])
@@ -279,6 +281,7 @@ model MailboxMessage {
   bodyText          String?
   bodyHtml          String?
   isRead            Boolean  @default(false)
+  isStarred         Boolean  @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -289,4 +292,34 @@ model MailboxMessage {
   @@unique([mailboxAccountId, providerMessageId])
   @@index([mailboxAccountId, date])
   @@index([mailboxAccountId, isRead])
+  @@index([mailboxAccountId, isStarred])
+}
+
+// ─── Draft (taslak) mesajlar ─────────────────────────────────────────────────
+
+model MailDraft {
+  id               String  @id @default(cuid())
+  userId           String
+  mailboxAccountId String
+
+  /** JSON string array: ["a@x.com", "b@y.com"] — boş taslak için null */
+  toEmails  String?
+  ccEmails  String?
+  bccEmails String?
+
+  subject  String?
+  bodyText String?
+  bodyHtml String?
+
+  /** [{ filename, contentType, contentBase64 }] */
+  attachments Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user           IamUser        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mailboxAccount MailboxAccount @relation(fields: [mailboxAccountId], references: [id], onDelete: Cascade)
+
+  @@index([userId, updatedAt])
+  @@index([mailboxAccountId, updatedAt])
 }

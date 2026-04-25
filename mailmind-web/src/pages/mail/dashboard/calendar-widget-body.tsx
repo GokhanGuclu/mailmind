@@ -7,7 +7,7 @@ import {
   useState,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { LuChevronLeft, LuChevronRight, LuX } from 'react-icons/lu';
+import { LuChevronLeft, LuChevronRight, LuPencil, LuPlus, LuTrash2, LuX } from 'react-icons/lu';
 
 import { useUIContext } from '../../../shared/context/ui-context';
 import type { MailDashboardCopy } from '../page.mock-data';
@@ -20,7 +20,18 @@ import {
   type YM,
   ymdKey,
 } from './calendar-widget-utils';
-import { findSpecialDay, resolveCalendarEventSeeds } from './calendar-seeds';
+import { findSpecialDay } from './calendar-seeds';
+import {
+  CALENDAR_COLOR_PRESETS,
+  useCalendarEntries,
+  type CalendarEntryType,
+} from './calendar-events-store';
+
+const DEFAULT_EVENT_COLOR = '#3b82f6';
+const DEFAULT_TASK_COLOR = '#10b981';
+function entryColor(type: CalendarEntryType, color?: string) {
+  return color ?? (type === 'task' ? DEFAULT_TASK_COLOR : DEFAULT_EVENT_COLOR);
+}
 
 type Props = {
   copy: MailDashboardCopy;
@@ -108,10 +119,42 @@ export function CalendarWidgetBody({ copy }: Props) {
   const bounds = useMemo(() => getCalendarViewBounds(anchorRef.current), []);
   const [view, setView] = useState<YM>(() => clampYM({ y: anchorRef.current.getFullYear(), m: anchorRef.current.getMonth() }, bounds.min, bounds.max));
 
-  const eventsByYmd = useMemo(
-    () => resolveCalendarEventSeeds(anchorRef.current, copy.mock.calendarEventSeeds),
-    [copy.mock.calendarEventSeeds],
-  );
+  const { addEntry, updateEntry, removeEntry, entriesMap } = useCalendarEntries();
+  const eventsByYmd = useMemo(() => entriesMap(), [entriesMap]);
+  const isTr = language === 'tr';
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formTitle, setFormTitle] = useState('');
+  const [formNote, setFormNote] = useState('');
+  const [formTime, setFormTime] = useState('09:00');
+  const [formType, setFormTypeRaw] = useState<CalendarEntryType>('event');
+  const [formColor, setFormColor] = useState<string>(DEFAULT_EVENT_COLOR);
+  const setFormType = (t: CalendarEntryType) => {
+    setFormTypeRaw(t);
+    setFormColor((c) =>
+      c === DEFAULT_EVENT_COLOR || c === DEFAULT_TASK_COLOR
+        ? (t === 'task' ? DEFAULT_TASK_COLOR : DEFAULT_EVENT_COLOR)
+        : c,
+    );
+  };
+  const resetForm = () => {
+    setFormOpen(false);
+    setEditingId(null);
+    setFormTitle('');
+    setFormNote('');
+    setFormTime('09:00');
+    setFormTypeRaw('event');
+    setFormColor(DEFAULT_EVENT_COLOR);
+  };
+  const startEdit = (ev: { id: string; time: string; title: string; type: CalendarEntryType; color?: string; note?: string }) => {
+    setEditingId(ev.id);
+    setFormTitle(ev.title);
+    setFormNote(ev.note ?? '');
+    setFormTime(ev.time);
+    setFormTypeRaw(ev.type);
+    setFormColor(ev.color ?? (ev.type === 'task' ? DEFAULT_TASK_COLOR : DEFAULT_EVENT_COLOR));
+    setFormOpen(true);
+  };
 
   const touchRef = useRef<{ x: number; y: number } | null>(null);
 
@@ -161,19 +204,30 @@ export function CalendarWidgetBody({ copy }: Props) {
   const [popover, setPopover] = useState<PopoverState | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
 
-  const closePopover = useCallback(() => setPopover(null), []);
+  const closePopover = useCallback(() => {
+    setPopover(null);
+    setFormOpen(false);
+    setFormTitle('');
+  }, []);
 
   const openPopover = useCallback((e: React.MouseEvent<HTMLButtonElement>, y: number, m: number, d: number) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const pos = computePopoverPosition(rect);
     setPopover((prev) => {
-      if (prev && prev.y === y && prev.m === m && prev.d === d) return null;
+      if (prev && prev.y === y && prev.m === m && prev.d === d) {
+        setFormOpen(false);
+        setFormTitle('');
+        return null;
+      }
+      setFormOpen(false);
+      setFormTitle('');
       return { y, m, d, ...pos };
     });
   }, []);
 
   useEffect(() => {
     setPopover(null);
+    setFormOpen(false);
   }, [view.y, view.m]);
 
   useEffect(() => {
@@ -323,19 +377,184 @@ export function CalendarWidgetBody({ copy }: Props) {
                   </section>
                 ) : null}
                 <section className="mail-dash-cal-popover__section mail-dash-cal-popover__section--events">
-                  <p className="mail-dash-cal-popover__sec-title">{copy.mock.calendarSectionEvents}</p>
-                  {popoverEvents.length === 0 ? (
+                  <div className="mail-dash-cal-popover__sec-header">
+                    <p className="mail-dash-cal-popover__sec-title">{isTr ? 'Etkinlik ve Görevler' : 'Events & Tasks'}</p>
+                    {!formOpen ? (
+                      <button
+                        type="button"
+                        className="mail-dash-cal-popover__add-btn mail-dash-widget__n_drag"
+                        onClick={() => setFormOpen(true)}
+                        aria-label={isTr ? 'Ekle' : 'Add'}
+                        title={isTr ? 'Etkinlik / Görev ekle' : 'Add event / task'}
+                      >
+                        <LuPlus size={13} aria-hidden />
+                        <span>{isTr ? 'Ekle' : 'Add'}</span>
+                      </button>
+                    ) : null}
+                  </div>
+
+                  {formOpen && popover ? (
+                    <form
+                      className="mail-dash-cal-popover__form"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        if (!formTitle.trim()) return;
+                        const payload = {
+                          y: popover.y,
+                          m: popover.m,
+                          d: popover.d,
+                          time: formTime,
+                          title: formTitle.trim(),
+                          type: formType,
+                          color: formColor,
+                          note: formNote.trim() || undefined,
+                        };
+                        if (editingId) {
+                          updateEntry(editingId, payload);
+                        } else {
+                          addEntry(payload);
+                        }
+                        resetForm();
+                      }}
+                    >
+                      <p className="mail-dash-cal-popover__form-title">
+                        {editingId ? (isTr ? 'Düzenle' : 'Edit') : (isTr ? 'Yeni Kayıt' : 'New Entry')}
+                      </p>
+                      <input
+                        className="mail-dash-cal-popover__input mail-dash-widget__n_drag"
+                        type="text"
+                        placeholder={isTr ? 'Başlık…' : 'Title…'}
+                        value={formTitle}
+                        onChange={(e) => setFormTitle(e.target.value)}
+                        autoFocus
+                        maxLength={120}
+                        required
+                      />
+                      <textarea
+                        className="mail-dash-cal-popover__input mail-dash-cal-popover__textarea mail-dash-widget__n_drag"
+                        placeholder={isTr ? 'Açıklama (isteğe bağlı)…' : 'Description (optional)…'}
+                        value={formNote}
+                        onChange={(e) => setFormNote(e.target.value)}
+                        rows={2}
+                        maxLength={1000}
+                      />
+                      <div className="mail-dash-cal-popover__form-row">
+                        <input
+                          className="mail-dash-cal-popover__input mail-dash-cal-popover__input--time mail-dash-widget__n_drag"
+                          type="time"
+                          value={formTime}
+                          onChange={(e) => setFormTime(e.target.value)}
+                        />
+                      </div>
+                      <div className="mail-dash-cal-popover__labeled-row">
+                        <span className="mail-dash-cal-popover__color-label">{isTr ? 'Tür' : 'Type'}</span>
+                        <div className="mail-dash-cal-popover__type-toggle">
+                          <button
+                            type="button"
+                            className={`mail-dash-cal-popover__type-btn mail-dash-widget__n_drag ${formType === 'event' ? 'mail-dash-cal-popover__type-btn--active' : ''}`}
+                            onClick={() => setFormType('event')}
+                          >
+                            {isTr ? 'Etkinlik' : 'Event'}
+                          </button>
+                          <button
+                            type="button"
+                            className={`mail-dash-cal-popover__type-btn mail-dash-widget__n_drag ${formType === 'task' ? 'mail-dash-cal-popover__type-btn--active' : ''}`}
+                            onClick={() => setFormType('task')}
+                          >
+                            {isTr ? 'Görev' : 'Task'}
+                          </button>
+                        </div>
+                      </div>
+                      <div className="mail-dash-cal-popover__color-row">
+                        <span className="mail-dash-cal-popover__color-label">{isTr ? 'Renk' : 'Color'}</span>
+                        <div className="mail-dash-cal-popover__color-swatches">
+                          {CALENDAR_COLOR_PRESETS.map((preset) => (
+                            <button
+                              key={preset.value}
+                              type="button"
+                              className={`mail-dash-cal-popover__color-swatch mail-dash-widget__n_drag ${formColor === preset.value ? 'mail-dash-cal-popover__color-swatch--active' : ''}`}
+                              style={{ background: preset.value }}
+                              onClick={() => setFormColor(preset.value)}
+                              aria-label={preset.label}
+                              aria-pressed={formColor === preset.value}
+                              title={preset.label}
+                            />
+                          ))}
+                          <label className="mail-dash-cal-popover__color-swatch mail-dash-cal-popover__color-swatch--custom mail-dash-widget__n_drag" title={isTr ? 'Özel renk' : 'Custom'}>
+                            <input
+                              type="color"
+                              value={formColor}
+                              onChange={(e) => setFormColor(e.target.value)}
+                              aria-label={isTr ? 'Özel renk seç' : 'Pick custom color'}
+                            />
+                          </label>
+                        </div>
+                      </div>
+                      <div className="mail-dash-cal-popover__form-actions">
+                        <button
+                          type="button"
+                          className="mail-dash-cal-popover__btn mail-dash-cal-popover__btn--ghost mail-dash-widget__n_drag"
+                          onClick={resetForm}
+                        >
+                          {isTr ? 'İptal' : 'Cancel'}
+                        </button>
+                        <button
+                          type="submit"
+                          className="mail-dash-cal-popover__btn mail-dash-cal-popover__btn--accent mail-dash-widget__n_drag"
+                          disabled={!formTitle.trim()}
+                        >
+                          {isTr ? 'Kaydet' : 'Save'}
+                        </button>
+                      </div>
+                    </form>
+                  ) : null}
+
+                  {popoverEvents.length === 0 && !formOpen ? (
                     <p className="mail-dash-cal-popover__empty">{copy.mock.calendarNoEvents}</p>
-                  ) : (
+                  ) : popoverEvents.length > 0 ? (
                     <ul className="mail-dash-cal-popover__events">
-                      {popoverEvents.map((ev, i) => (
-                        <li key={`${ev.time}-${ev.title}-${i}`} className="mail-dash-cal-popover__event">
+                      {popoverEvents.map((ev) => {
+                        const c = entryColor(ev.type, ev.color);
+                        const isEditing = editingId === ev.id;
+                        return (
+                        <li
+                          key={ev.id}
+                          className={`mail-dash-cal-popover__event mail-dash-cal-popover__event--${ev.type} ${isEditing ? 'mail-dash-cal-popover__event--editing' : ''}`}
+                          style={{ ['--entry-color' as string]: c, borderColor: `color-mix(in srgb, ${c} 35%, var(--border))` }}
+                        >
+                          <span className="mail-dash-cal-popover__ev-dot" aria-hidden style={{ background: c }} />
                           <span className="mail-dash-cal-popover__ev-time">{ev.time}</span>
-                          <span className="mail-dash-cal-popover__ev-title">{ev.title}</span>
+                          <div className="mail-dash-cal-popover__ev-body">
+                            <span className="mail-dash-cal-popover__ev-title">{ev.title}</span>
+                            {ev.note ? (
+                              <p className="mail-dash-cal-popover__ev-note">{ev.note}</p>
+                            ) : null}
+                          </div>
+                          <div className="mail-dash-cal-popover__ev-actions">
+                            <button
+                              type="button"
+                              className="mail-dash-cal-popover__ev-action mail-dash-widget__n_drag"
+                              onClick={() => startEdit(ev)}
+                              aria-label={isTr ? 'Düzenle' : 'Edit'}
+                              title={isTr ? 'Düzenle' : 'Edit'}
+                            >
+                              <LuPencil size={12} aria-hidden />
+                            </button>
+                            <button
+                              type="button"
+                              className="mail-dash-cal-popover__ev-action mail-dash-cal-popover__ev-action--danger mail-dash-widget__n_drag"
+                              onClick={() => removeEntry(ev.id)}
+                              aria-label={isTr ? 'Sil' : 'Delete'}
+                              title={isTr ? 'Sil' : 'Delete'}
+                            >
+                              <LuTrash2 size={12} aria-hidden />
+                            </button>
+                          </div>
                         </li>
-                      ))}
+                        );
+                      })}
                     </ul>
-                  )}
+                  ) : null}
                 </section>
               </div>
             </div>,

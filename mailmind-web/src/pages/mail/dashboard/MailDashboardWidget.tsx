@@ -3,6 +3,9 @@ import GripVertical from 'lucide-react/dist/esm/icons/grip-vertical.js';
 import type { WidgetInstance } from './types';
 import type { MailDashboardCopy } from '../page.mock-data';
 import { CalendarWidgetBody } from './calendar-widget-body';
+import { InboxWidgetBody } from './InboxWidgetBody';
+import { UnreadWidgetBody } from './UnreadWidgetBody';
+import { StarredWidgetBody } from './StarredWidgetBody';
 
 type Props = {
   instance: WidgetInstance;
@@ -36,19 +39,11 @@ function MockRows({
 function WidgetBody({ instance, copy }: Props) {
   switch (instance.kind) {
     case 'inbox':
-      return (
-        <div className="mail-dash-widget__body mail-dash-widget__body--inbox">
-          <MockRows copy={copy} n={8} unreadFirst={3} />
-        </div>
-      );
+      return <InboxWidgetBody copy={copy} />;
     case 'unread':
-      return (
-        <div className="mail-dash-widget__pane">
-          <p className="mail-dash-widget__badge-count">7</p>
-          <MockRows copy={copy} n={4} unreadFirst={4} />
-        </div>
-      );
+      return <UnreadWidgetBody copy={copy} />;
     case 'starred':
+      return <StarredWidgetBody copy={copy} />;
     case 'important-contacts':
       return (
         <div className="mail-dash-widget__pane">

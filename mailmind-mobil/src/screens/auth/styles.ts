@@ -1,289 +1,145 @@
-import { Dimensions, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 
-const { height, width } = Dimensions.get('window');
-
-/** AuthSplitScreen — kayan panel giriş/kayıt */
-export const authSplitStyles = StyleSheet.create({
-  flex1: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#0b1220',
-  },
-  loginContent: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: height * 0.15,
-  },
-  title: {
-    fontSize: 36,
-    fontWeight: '900',
-    color: '#f8fafc',
-    letterSpacing: -1,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#94a3b8',
-    marginTop: 10,
-    marginBottom: 40,
-  },
-  formGroup: {
-    width: '100%',
-  },
-  label: {
-    color: '#64748b',
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 1.2,
-    marginBottom: 8,
-    marginTop: 20,
-  },
-  input: {
-    height: 56,
-    backgroundColor: '#111827',
-    borderWidth: 1,
-    borderColor: '#1e293b',
-    borderRadius: 16,
-    paddingHorizontal: 20,
-    color: '#fff',
-    fontSize: 16,
-  },
-  primaryButton: {
-    height: 58,
-    backgroundColor: '#1e293b',
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 40,
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  primaryButtonAccent: {
-    backgroundColor: '#3b82f6',
-    borderColor: '#3b82f6',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  slidingPanel: {
-    position: 'absolute',
-    width: width,
-    height: height,
-    backgroundColor: '#1f2937',
-    borderTopLeftRadius: 40,
-    borderTopRightRadius: 40,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -20 },
-    shadowOpacity: 0.6,
-    shadowRadius: 30,
-    elevation: 40,
-  },
-  panelHandle: {
-    height: height * 0.08,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  handleBar: {
-    width: 40,
-    height: 4,
-    backgroundColor: '#4b5563',
-    borderRadius: 2,
-    position: 'absolute',
-    top: 12,
-  },
-  handleTextRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  handleText: {
-    color: '#94a3b8',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  handleAction: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '900',
-  },
-  registerBody: {
-    paddingHorizontal: 24,
-    paddingTop: 20,
-  },
-  regTitle: {
-    fontSize: 30,
-    fontWeight: '900',
-    color: '#fff',
-  },
-  regSubtitle: {
-    fontSize: 15,
-    color: '#94a3b8',
-    marginTop: 5,
-    marginBottom: 10,
-  },
-});
+export const authColors = {
+  bg: '#0b1220',
+  surface: '#111827',
+  surfaceSoft: '#1f2937',
+  border: '#334155',
+  borderSoft: '#1e293b',
+  textPrimary: '#f8fafc',
+  textSecondary: '#94a3b8',
+  textMuted: '#64748b',
+  placeholder: '#475569',
+  accent: '#3b82f6',
+  accentText: '#ffffff',
+  link: '#60a5fa',
+};
 
 export const authStyles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#0b1220',
+    backgroundColor: authColors.bg,
   },
+  flex1: { flex: 1 },
 
-  frame: {
-    flex: 1,
-    backgroundColor: '#111827',
-    overflow: 'hidden',
-  },
-
-  heroWrap: {
-    height: 360,
-    justifyContent: 'flex-start',
-    overflow: 'hidden',
-  },
-
-  heroShape: {
-    width: '100%',
-    height: 340,
-    backgroundColor: '#1f2937',
-    borderBottomLeftRadius: 200,
-    borderBottomRightRadius: 200,
-    paddingTop: 44,
-    paddingBottom: 34,
-    paddingHorizontal: 24,
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 28,
+    paddingBottom: 32,
     justifyContent: 'center',
+  },
+
+  brandRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    position: 'relative',
+    gap: 10,
+    marginBottom: 40,
   },
-
-  heroTitle: {
-    color: '#f8fafc',
-    fontSize: 34,
-    fontWeight: '800',
-    textAlign: 'center',
+  brandDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: authColors.accent,
   },
-
-  heroSubtitle: {
-    color: '#cbd5e1',
-    fontSize: 15,
-    marginTop: 14,
-    textAlign: 'center',
-    lineHeight: 22,
-    maxWidth: 320,
-  },
-
-  heroActionButton: {
-    marginTop: 22,
-    minWidth: 180,
-    height: 46,
-    borderWidth: 1,
-    borderColor: '#64748b',
-    backgroundColor: '#0f172a',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 18,
-  },
-
-  heroActionText: {
-    color: '#f8fafc',
-    fontSize: 15,
+  brandText: {
+    color: authColors.textPrimary,
+    fontSize: 16,
     fontWeight: '700',
+    letterSpacing: 0.3,
   },
 
-  switchDot: {
-    position: 'absolute',
-    right: 18,
-    bottom: 18,
-    width: 8,
-    height: 8,
-    borderRadius: 999,
-    backgroundColor: '#94a3b8',
-    opacity: 0.7,
-  },
-
-  formArea: {
-    paddingHorizontal: 18,
-    paddingTop: 12,
-    paddingBottom: 0,
-    overflow: 'hidden',
-  },
-
-  formCard: {
-    borderWidth: 1,
-    borderColor: '#334155',
-    backgroundColor: '#0b1220',
-    padding: 18,
-  },
-
-  formTitle: {
-    color: '#f8fafc',
-    fontSize: 28,
+  title: {
+    fontSize: 32,
     fontWeight: '800',
+    color: authColors.textPrimary,
+    letterSpacing: -0.6,
   },
-
-  formSubtitle: {
-    color: '#94a3b8',
+  subtitle: {
     fontSize: 14,
+    color: authColors.textSecondary,
     marginTop: 8,
-    marginBottom: 18,
+    marginBottom: 24,
     lineHeight: 20,
   },
 
   label: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    marginTop: 8,
+    fontSize: 11,
+    fontWeight: '700',
+    color: authColors.textMuted,
+    letterSpacing: 1.1,
+    marginTop: 14,
     marginBottom: 6,
   },
-
   input: {
-    height: 48,
+    height: 50,
+    backgroundColor: authColors.surface,
     borderWidth: 1,
-    borderColor: '#475569',
-    backgroundColor: '#111827',
-    color: '#f8fafc',
-    paddingHorizontal: 12,
+    borderColor: authColors.borderSoft,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    color: authColors.textPrimary,
+    fontSize: 15,
+  },
+  inputFocused: {
+    borderColor: authColors.accent,
   },
 
-  submitButton: {
-    height: 48,
-    borderWidth: 1,
-    borderColor: '#64748b',
-    backgroundColor: '#1e293b',
-    marginTop: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  submitButtonText: {
-    color: '#f8fafc',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-
-  formHintWrap: {
-    paddingHorizontal: 18,
-    paddingTop: 12,
-  },
-
-  formHint: {
-    borderWidth: 1,
-    borderColor: '#334155',
-    backgroundColor: '#0f172a',
+  primaryButton: {
     height: 52,
+    borderRadius: 12,
+    backgroundColor: authColors.accent,
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 28,
   },
-
-  formHintText: {
-    color: '#94a3b8',
+  primaryButtonGhost: {
+    backgroundColor: authColors.surfaceSoft,
+    borderWidth: 1,
+    borderColor: authColors.border,
+  },
+  primaryButtonText: {
+    color: authColors.accentText,
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  pressed: {
+    opacity: 0.85,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
+  errorText: {
+    color: '#f87171',
     fontSize: 13,
+    marginTop: 14,
     fontWeight: '600',
   },
 
-  pressed: {
-    opacity: 0.84,
+  footerRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 24,
+  },
+  footerText: {
+    color: authColors.textSecondary,
+    fontSize: 14,
+  },
+  footerLink: {
+    color: authColors.link,
+    fontSize: 14,
+    fontWeight: '700',
+    marginLeft: 6,
+  },
+
+  forgotRow: {
+    alignItems: 'flex-end',
+    marginTop: 10,
+  },
+  forgotText: {
+    color: authColors.link,
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

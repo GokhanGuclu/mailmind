@@ -61,10 +61,13 @@ export class MailboxSyncWorkerService implements OnModuleInit {
   }
 
   async processOnce(): Promise<void> {
-    // 1) Önce stale RUNNING job'ları kurtar (worker crash sonrası kilitli kalanlar)
+    // 1) Stale RUNNING job'ları kurtar
     await this.recoverStaleRunningJobs();
 
-    // 2) PENDING bir job seç
+    // 2) Süresi dolan hesaplar için incremental job aç
+    await this.scheduleOverdueIncrementals();
+
+    // 3) PENDING bir job seç
     const job = await this.prisma.mailboxSyncJob.findFirst({
       where: { status: 'PENDING' },
       orderBy: { createdAt: 'asc' },
@@ -86,9 +89,6 @@ export class MailboxSyncWorkerService implements OnModuleInit {
         where: { id: job.id },
         data: { status: 'DONE', finishedAt: new Date(), cursor: JSON.stringify(newCursor) },
       });
-
-      // Bir sonraki incremental sync'i zamanla
-      await this.scheduleIncremental(job.mailboxAccountId, newCursor);
     } catch (err: any) {
       await this.prisma.mailboxSyncJob.update({
         where: { id: job.id },
@@ -256,31 +256,48 @@ export class MailboxSyncWorkerService implements OnModuleInit {
     });
   }
 
-  private async scheduleIncremental(
-    mailboxAccountId: string,
-    cursor: SyncCursor,
-  ): Promise<void> {
-    // Son DONE job'ın bitişinden bu yana 60 saniye geçmediyse yeni job açma
-    const lastDone = await this.prisma.mailboxSyncJob.findFirst({
-      where: { mailboxAccountId, status: 'DONE' },
-      orderBy: { finishedAt: 'desc' },
-      select: { finishedAt: true },
+  /**
+   * Tüm ACTIVE mailbox hesaplarını tarar.
+   * Son DONE job'ı COOLDOWN_MS'den daha eski olan ve aktif job'u olmayan
+   * hesaplar için yeni bir INCREMENTAL job açar.
+   */
+  private async scheduleOverdueIncrementals(): Promise<void> {
+    const cooldownMs = Number(process.env.MAILBOX_SYNC_COOLDOWN_MS ?? 30_000);
+    const threshold = new Date(Date.now() - cooldownMs);
+
+    const accounts = await this.prisma.mailboxAccount.findMany({
+      where: { status: 'ACTIVE' },
+      select: { id: true },
     });
 
-    const COOLDOWN_MS = Number(process.env.MAILBOX_SYNC_COOLDOWN_MS ?? 60_000);
-    if (lastDone?.finishedAt) {
-      const elapsed = Date.now() - lastDone.finishedAt.getTime();
-      if (elapsed < COOLDOWN_MS) return;
+    for (const account of accounts) {
+      // Zaten PENDING veya RUNNING job varsa atla
+      const hasPending = await this.prisma.mailboxSyncJob.findFirst({
+        where: { mailboxAccountId: account.id, status: { in: ['PENDING', 'RUNNING'] } },
+        select: { id: true },
+      });
+      if (hasPending) continue;
+
+      // Son DONE job'ı bul
+      const lastDone = await this.prisma.mailboxSyncJob.findFirst({
+        where: { mailboxAccountId: account.id, status: 'DONE' },
+        orderBy: { finishedAt: 'desc' },
+        select: { finishedAt: true, cursor: true },
+      });
+
+      if (!lastDone?.finishedAt) continue;          // hiç sync olmamış
+      if (lastDone.finishedAt > threshold) continue; // henüz cooldown'da
+
+      await this.prisma.mailboxSyncJob.create({
+        data: {
+          mailboxAccountId: account.id,
+          type: 'INCREMENTAL',
+          status: 'PENDING',
+          cursor: lastDone.cursor,
+        },
+      });
+      this.logger.log(`Scheduled INCREMENTAL sync for mailbox=${account.id}`);
     }
-
-    await this.prisma.mailboxSyncJob.create({
-      data: {
-        mailboxAccountId,
-        type: 'INCREMENTAL',
-        status: 'PENDING',
-        cursor: JSON.stringify(cursor),
-      },
-    });
   }
 
   private parseCursor(raw: string): SyncCursor {

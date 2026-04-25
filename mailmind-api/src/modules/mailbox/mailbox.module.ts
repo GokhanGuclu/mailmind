@@ -9,8 +9,10 @@ import { MailboxSyncWorkerService } from './infrastructure/providers/sync/mailbo
 import { ImapProvider } from './infrastructure/providers/imap/imap.provider';
 import { MailboxSmtpService } from './infrastructure/smtp/mailbox-smtp.service';
 import { CredentialCipher } from '../../shared/infrastructure/security/credential-cipher';
+import { AiModule } from '../ai/ai.module';
 
 @Module({
+  imports: [AiModule],
   controllers: [MailboxController, MailboxAccountsController, MailboxMessagesController],
   providers: [
     CredentialCipher,

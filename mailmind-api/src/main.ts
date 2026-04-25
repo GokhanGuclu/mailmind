@@ -1,10 +1,19 @@
 import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  const corsOrigins = (process.env.CORS_ORIGIN ?? 'http://localhost:5173')
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,            // @Type decorators work (string → number etc.)
+      whitelist: true,             // strip unknown properties
+      forbidNonWhitelisted: false, // don't throw on extra props
+    }),
+  );
+
+  const corsOrigins = (process.env.CORS_ORIGIN ?? 'http://localhost:5173,http://localhost:8081')
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);

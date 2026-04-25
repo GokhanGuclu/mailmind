@@ -4,35 +4,35 @@ import { AiProviderPort, EmailContent } from '../../application/ports/ai-provide
 import { AnalysisResult, TaskResult, CalendarEventResult } from '../../domain/value-objects/analysis-result.vo';
 import { AiProviderError, AiResponseParseError } from '../../domain/errors/ai.errors';
 
-const SYSTEM_PROMPT = `You are an email assistant. Analyze the given email and extract structured information.
+const SYSTEM_PROMPT = `Sen bir e-posta asistanısın. Verilen e-postayı analiz et ve yapılandırılmış bilgi çıkar.
 
-Respond ONLY with a valid JSON object in this exact format (no markdown, no explanation):
+SADECE aşağıdaki formatta geçerli bir JSON nesnesiyle yanıt ver (markdown yok, açıklama yok):
 {
-  "summary": "A brief 2-3 sentence summary of the email content",
+  "summary": "E-posta içeriğinin 2-3 cümlelik kısa Türkçe özeti",
   "tasks": [
     {
-      "title": "Action item title",
-      "notes": "Optional additional context or null",
-      "dueAt": "ISO 8601 date string or null",
-      "priority": "LOW" or "MEDIUM" or "HIGH"
+      "title": "Eylem maddesi başlığı",
+      "notes": "İsteğe bağlı ek bağlam veya null",
+      "dueAt": "ISO 8601 tarih dizesi veya null",
+      "priority": "LOW" veya "MEDIUM" veya "HIGH"
     }
   ],
   "calendarEvents": [
     {
-      "title": "Event or meeting title",
-      "startAt": "ISO 8601 date string",
-      "endAt": "ISO 8601 date string or null",
-      "location": "Location string or null",
+      "title": "Etkinlik veya toplantı başlığı",
+      "startAt": "ISO 8601 tarih dizesi",
+      "endAt": "ISO 8601 tarih dizesi veya null",
+      "location": "Konum dizesi veya null",
       "attendees": ["email@example.com"]
     }
   ]
 }
 
-Rules:
-- tasks: only real action items that require follow-up. Empty array if none.
-- calendarEvents: only events with a clear date/time. Empty array if none.
-- summary: write in the same language as the email.
-- Respond with ONLY the JSON object. No extra text before or after.`;
+Kurallar:
+- tasks: yalnızca takip gerektiren gerçek eylem maddeleri. Yoksa boş dizi.
+- calendarEvents: yalnızca net tarih/saati olan etkinlikler. Yoksa boş dizi.
+- summary: HER ZAMAN Türkçe yaz, e-postanın dilinden bağımsız olarak.
+- SADECE JSON nesnesiyle yanıt ver. Önce veya sonra ekstra metin olmadan.`;
 
 @Injectable()
 export class OllamaProvider implements AiProviderPort {

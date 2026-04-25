@@ -54,3 +54,58 @@ export function buildMonthGrid(y: number, m: number): { daysInMonth: number; cel
   for (let d = 1; d <= daysInMonth; d++) cells.push({ kind: 'day', d });
   return { daysInMonth, cells };
 }
+
+export type WeekCell =
+  | { kind: 'day'; y: number; m: number; d: number }
+  | { kind: 'other'; y: number; m: number; d: number };
+
+export type WeekRow = { weekNumber: number; days: WeekCell[] };
+
+/** ISO 8601 hafta numarası. */
+export function isoWeekNumber(y: number, m: number, d: number): number {
+  const date = new Date(Date.UTC(y, m, d));
+  const day = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  return Math.ceil(((date.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+}
+
+/**
+ * Ay görünümü: 6 haftalık sabit ızgara.
+ * Önceki ve sonraki aydan taşan günleri `kind: 'other'` olarak döner.
+ * Her satır için hafta numarası hesaplar.
+ */
+export function buildMonthWeeks(y: number, m: number): WeekRow[] {
+  const first = new Date(y, m, 1);
+  const jsDow = first.getDay();
+  const leading = (jsDow + 6) % 7;
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const prevLast = new Date(y, m, 0);
+  const prevY = prevLast.getFullYear();
+  const prevM = prevLast.getMonth();
+  const prevDays = prevLast.getDate();
+  const nextFirst = new Date(y, m + 1, 1);
+  const nextY = nextFirst.getFullYear();
+  const nextM = nextFirst.getMonth();
+
+  const flat: WeekCell[] = [];
+  for (let i = leading - 1; i >= 0; i--) {
+    flat.push({ kind: 'other', y: prevY, m: prevM, d: prevDays - i });
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    flat.push({ kind: 'day', y, m, d });
+  }
+  let trailingDay = 1;
+  while (flat.length < 42) {
+    flat.push({ kind: 'other', y: nextY, m: nextM, d: trailingDay });
+    trailingDay += 1;
+  }
+
+  const weeks: WeekRow[] = [];
+  for (let w = 0; w < 6; w++) {
+    const days = flat.slice(w * 7, w * 7 + 7);
+    const ref = days[0];
+    weeks.push({ weekNumber: isoWeekNumber(ref.y, ref.m, ref.d), days });
+  }
+  return weeks;
+}

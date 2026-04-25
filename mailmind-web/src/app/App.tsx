@@ -10,6 +10,7 @@ import { MailSpamPage } from '../pages/mail/MailSpamPage';
 import { MailSentPage } from '../pages/mail/MailSentPage';
 import { MailDraftsPage } from '../pages/mail/MailDraftsPage';
 import { MailTrashPage } from '../pages/mail/MailTrashPage';
+import { MailStarredPage } from '../pages/mail/MailStarredPage';
 import { MailComposePage } from '../pages/mail/MailComposePage';
 import { CookieConsentBanner } from '../shared/components/CookieConsentBanner';
 import { ProtectedRoute } from '../shared/components/ProtectedRoute';
@@ -42,13 +43,14 @@ export function App() {
           }
         >
           <Route index element={<MailInboxPage />} />
+          <Route path="yildizlilar" element={<MailStarredPage />} />
           <Route path="pano" element={<MailDashboardPage />} />
           <Route path="takvim" element={<MailCalendarPage />} />
           <Route path="spam" element={<MailSpamPage />} />
           <Route path="gonderilen" element={<MailSentPage />} />
           <Route path="taslaklar" element={<MailDraftsPage />} />
           <Route path="cop-kutusu" element={<MailTrashPage />} />
-          <Route path="yeni-posta" element={<MailComposePage />} />
+          <Route path="new" element={<MailComposePage />} />
         </Route>
         <Route path="*" element={<Navigate to="/home" replace />} />
       </Routes>

@@ -11,6 +11,7 @@ import {
   LuMailPlus,
   LuSearch,
   LuSend,
+  LuStar,
   LuTrash2,
   LuUserRound,
 } from 'react-icons/lu';
@@ -21,12 +22,13 @@ import './mail-dashboard.css';
 
 function mailNavbarTitle(pathname: string, copy: MailDashboardCopy): string {
   if (pathname.endsWith('/pano')) return copy.navDashboard;
+  if (pathname.endsWith('/yildizlilar')) return copy.navStarred;
   if (pathname.endsWith('/takvim')) return copy.navCalendar;
   if (pathname.endsWith('/spam')) return copy.navSpam;
   if (pathname.endsWith('/gonderilen')) return copy.navSent;
   if (pathname.endsWith('/taslaklar')) return copy.navDrafts;
   if (pathname.endsWith('/cop-kutusu')) return copy.navTrash;
-  if (pathname.endsWith('/yeni-posta')) return copy.navNewMail;
+  if (pathname.endsWith('/new')) return copy.navNewMail;
   return copy.navGeneralInbox;
 }
 
@@ -146,7 +148,7 @@ export function MailLayout() {
             <span className="mail-dash-sidebar__title">{copy.mailSidebarTitle}</span>
           </div>
           <NavLink
-            to="/mail/yeni-posta"
+            to="/mail/new"
             className={({ isActive }) =>
               `mail-dash-sidebar__new-mail ${isActive ? 'mail-dash-sidebar__new-mail--active' : ''}`
             }
@@ -173,6 +175,15 @@ export function MailLayout() {
             >
               <LuInbox size={18} aria-hidden />
               {copy.navGeneralInbox}
+            </NavLink>
+            <NavLink
+              to="/mail/yildizlilar"
+              className={({ isActive }) =>
+                `mail-dash-sidebar__link ${isActive ? 'mail-dash-sidebar__link--active' : ''}`
+              }
+            >
+              <LuStar size={18} aria-hidden />
+              {copy.navStarred}
             </NavLink>
             <NavLink
               to="/mail/takvim"

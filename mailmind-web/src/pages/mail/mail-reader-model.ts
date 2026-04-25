@@ -7,7 +7,7 @@ export type MailReaderFolderVariant = 'inbox' | 'spam' | 'sent' | 'drafts' | 'tr
 export type MailReaderModel = {
   subject: string;
   bodyText: string;
-  /** Genel kutu: HTML gövde (sanitize edilerek gösterilir) */
+  /** Gelen kutusu: HTML gövde (sanitize edilerek gösterilir) */
   bodyHtml?: string | null;
   displayName: string;
   displayEmail: string | null;

@@ -1,0 +1,58 @@
+import { apiRequest } from './client';
+
+export type ApiCalendarEvent = {
+  id: string;
+  title: string;
+  description: string | null;
+  startAt: string;
+  endAt: string | null;
+  location: string | null;
+  attendees: string | null;
+  status: string | null;
+  aiAnalysisId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateCalendarEventPayload = {
+  title: string;
+  description?: string;
+  startAt: string;
+  endAt?: string;
+  location?: string;
+  attendees?: string[];
+};
+
+export type UpdateCalendarEventPayload = Partial<CreateCalendarEventPayload>;
+
+export const calendarApi = {
+  list(accessToken: string) {
+    return apiRequest<ApiCalendarEvent[]>('/calendar/events', {
+      method: 'GET',
+      token: accessToken,
+    });
+  },
+
+  create(accessToken: string, payload: CreateCalendarEventPayload) {
+    return apiRequest<ApiCalendarEvent>('/calendar/events', {
+      method: 'POST',
+      token: accessToken,
+      body: payload,
+    });
+  },
+
+  update(accessToken: string, eventId: string, payload: UpdateCalendarEventPayload) {
+    return apiRequest<ApiCalendarEvent>(`/calendar/events/${eventId}`, {
+      method: 'PATCH',
+      token: accessToken,
+      body: payload,
+    });
+  },
+
+  remove(accessToken: string, eventId: string) {
+    return apiRequest<{ deleted: boolean }>(`/calendar/events/${eventId}`, {
+      method: 'DELETE',
+      token: accessToken,
+    });
+  },
+};

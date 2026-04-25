@@ -4,24 +4,28 @@ import * as NavigationBar from 'expo-navigation-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import { AuthSplitScreen } from '../screens/auth/AuthSplitScreen';
+import { AuthScreen } from '../screens/auth/AuthScreen';
+import { MailNavigator } from '../screens/mail/MailNavigator';
+import { AuthProvider, useAuth } from '../shared/auth/auth-context';
 
-/** Ana ekran (#0b1220) ile uyumlu, biraz daha koyu sistem navigasyon çubuğu */
-const ANDROID_NAV_BAR_BG = '#020617';
+function RootSwitch() {
+  const { status } = useAuth();
+  return status === 'authenticated' ? <MailNavigator /> : <AuthScreen />;
+}
 
 export function MobileApp() {
   useEffect(() => {
     if (Platform.OS !== 'android') return;
-    void (async () => {
-      await NavigationBar.setBackgroundColorAsync(ANDROID_NAV_BAR_BG);
-      await NavigationBar.setButtonStyleAsync('light');
-    })();
+    // Edge-to-edge modunda arkaplan rengi sistem tarafından yönetilir; yalnızca buton stilini ayarla.
+    void NavigationBar.setButtonStyleAsync('light').catch(() => {});
   }, []);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <AuthSplitScreen />
+        <AuthProvider>
+          <RootSwitch />
+        </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

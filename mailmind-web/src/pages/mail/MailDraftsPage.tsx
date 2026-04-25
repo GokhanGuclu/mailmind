@@ -1,33 +1,30 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   LuChevronDown,
   LuChevronLeft,
   LuChevronRight,
   LuEllipsisVertical,
   LuRefreshCw,
-  LuStar,
   LuTrash2,
   LuX,
 } from 'react-icons/lu';
 
 import { useUIContext } from '../../shared/context/ui-context';
+import { useDrafts } from '../../shared/context/drafts-context';
 import { formatMailPageRange } from './format-mail-page-range';
 import { mailDashboardContent } from './page.mock-data';
-import { MailMessageReader } from './MailMessageReader';
-import { readerFromDraft } from './mail-reader-model';
 
 const DRAFTS_PAGE_SIZE = 50;
 
 export function MailDraftsPage() {
   const { language } = useUIContext();
   const copy = mailDashboardContent[language];
-  const draftsRows = copy.mock.draftsMockRows;
+  const { drafts: draftsRows } = useDrafts();
+  const navigate = useNavigate();
 
   const [pageIndex, setPageIndex] = useState(0);
-  const [starredIds, setStarredIds] = useState<Set<string>>(() => new Set());
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
-  const [openedId, setOpenedId] = useState<string | null>(null);
-  const [readIds, setReadIds] = useState<Set<string>>(() => new Set());
 
   const totalPages = Math.max(1, Math.ceil(draftsRows.length / DRAFTS_PAGE_SIZE));
 
@@ -43,32 +40,12 @@ export function MailDraftsPage() {
 
   const pageIds = useMemo(() => pageRows.map((r) => r.id), [pageRows]);
 
-  const openedRow = useMemo(
-    () => (openedId ? draftsRows.find((r) => r.id === openedId) ?? null : null),
-    [openedId, draftsRows],
+  const openDraftForEdit = useCallback(
+    (id: string) => {
+      navigate(`/mail/new?draftId=${encodeURIComponent(id)}`);
+    },
+    [navigate],
   );
-
-  const openMessage = useCallback((id: string) => {
-    setOpenedId(id);
-    setReadIds((prev) => {
-      const next = new Set(prev);
-      next.add(id);
-      return next;
-    });
-  }, []);
-
-  const closeMessage = useCallback(() => {
-    setOpenedId(null);
-  }, []);
-
-  useEffect(() => {
-    if (!openedId) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeMessage();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [openedId, closeMessage]);
 
   const masterCheckboxRef = useRef<HTMLInputElement>(null);
   const allSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
@@ -79,15 +56,6 @@ export function MailDraftsPage() {
     if (!el) return;
     el.indeterminate = someSelected;
   }, [someSelected]);
-
-  const toggleStar = useCallback((id: string) => {
-    setStarredIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }, []);
 
   const toggleSelectAll = useCallback(() => {
     setSelectedIds((prev) => {
@@ -144,13 +112,7 @@ export function MailDraftsPage() {
     <main className="mail-dash-main mail-dash-main--inbox-only">
       <div className="mail-inbox">
         <div className="mail-dash-widget__body mail-dash-widget__body--inbox mail-inbox-list__wrap">
-          <div
-            className={
-              openedRow
-                ? 'mail-inbox-list__panel mail-inbox-list__panel--with-reader'
-                : 'mail-inbox-list__panel'
-            }
-          >
+          <div className="mail-inbox-list__panel">
             <div className="mail-inbox-list__split">
               <div className="mail-inbox-list__list-column">
             <div className="mail-inbox-toolbar" role="toolbar" aria-label={copy.draftsToolbarAria}>
@@ -247,28 +209,23 @@ export function MailDraftsPage() {
               </div>
             </div>
             <div className="mail-dash-list-scroll">
-              <ul className="mail-dash-widget__list mail-inbox-list" aria-label={copy.navDrafts}>
+              {draftsRows.length === 0 ? (
+                <div className="mail-inbox-list__empty">
+                  {language === 'tr' ? 'Henüz taslak yok.' : 'No drafts yet.'}
+                </div>
+              ) : null}
+              <ul className="mail-dash-widget__list mail-inbox-list mail-inbox-list--no-star" aria-label={copy.navDrafts}>
                 {pageRows.map((row) => {
                   const recipientLabel =
                     row.toEmail?.trim() || copy.draftsNoRecipientLabel;
                   const titleFull = `${row.subject} - ${row.preview}`;
-                  const isStarred = starredIds.has(row.id);
                   const isSelected = selectedIds.has(row.id);
-                  const isOpen = openedId === row.id;
-                  const isRead = readIds.has(row.id);
 
                   return (
                     <li
                       key={row.id}
-                      className={[
-                        'mail-dash-widget__list-item',
-                        'mail-inbox-list__item',
-                        isRead ? 'mail-inbox-list__item--read' : '',
-                        isOpen ? 'mail-inbox-list__item--open' : '',
-                      ]
-                        .filter(Boolean)
-                        .join(' ')}
-                      onClick={() => openMessage(row.id)}
+                      className="mail-dash-widget__list-item mail-inbox-list__item mail-inbox-list__item--read"
+                      onClick={() => openDraftForEdit(row.id)}
                     >
                       <label className="mail-inbox-list__check-wrap">
                         <input
@@ -280,28 +237,6 @@ export function MailDraftsPage() {
                           onClick={(e) => e.stopPropagation()}
                         />
                       </label>
-                      <button
-                        type="button"
-                        className={
-                          isStarred
-                            ? 'mail-inbox-list__star-btn mail-inbox-list__star-btn--starred'
-                            : 'mail-inbox-list__star-btn'
-                        }
-                        aria-label={copy.inboxStarRowAria}
-                        aria-pressed={isStarred}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleStar(row.id);
-                        }}
-                      >
-                        <LuStar
-                          size={18}
-                          aria-hidden
-                          fill={isStarred ? 'currentColor' : 'none'}
-                          stroke="currentColor"
-                          strokeWidth={isStarred ? 0 : 1.75}
-                        />
-                      </button>
                       <span className="mail-inbox-list__sender" title={recipientLabel}>
                         {recipientLabel}
                       </span>
@@ -320,14 +255,6 @@ export function MailDraftsPage() {
               </ul>
             </div>
               </div>
-              {openedRow ? (
-                <MailMessageReader
-                  model={readerFromDraft(openedRow, copy.draftsNoRecipientLabel)}
-                  variant="drafts"
-                  copy={copy}
-                  onClose={closeMessage}
-                />
-              ) : null}
             </div>
           </div>
         </div>

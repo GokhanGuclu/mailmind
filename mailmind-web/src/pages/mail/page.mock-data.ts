@@ -18,7 +18,7 @@ export type CalendarSpecialDaySeed = {
   description: string;
 };
 
-/** Genel kutusu mock örnek satırları (dil ile uyumlu). */
+/** Gelen kutusu mock örnek satırları (dil ile uyumlu). */
 export type InboxMockRow = {
   id: string;
   from: string;
@@ -43,7 +43,7 @@ export type DraftMockRow = {
   aiSummary?: string;
 };
 
-/** Genel kutusu liste satırı: Gmail benzeri konu + önizleme + isteğe bağlı ekler. */
+/** Gelen kutusu liste satırı: Gmail benzeri konu + önizleme + isteğe bağlı ekler. */
 export type GeneralInboxRow = {
   id: string;
   /** Gösterim için; boşsa `senderEmail` kullanılır */
@@ -79,6 +79,7 @@ export type MailDashboardCopy = {
   navDashboard: string;
   /** Takvim sayfası */
   navCalendar: string;
+  navStarred: string;
   navSpam: string;
   navSent: string;
   navDrafts: string;
@@ -109,7 +110,7 @@ export type MailDashboardCopy = {
   calendarPageToday: string;
   /** Tam sayfa takvim: henüz gün seçilmedi */
   calendarPageSidebarEmpty: string;
-  /** Genel kutusu: ek satırı etiketi */
+  /** Gelen kutusu: ek satırı etiketi */
   inboxAttachmentsLabel: string;
   /** Açık ileti: listeye dön */
   inboxBackToListAria: string;
@@ -161,7 +162,7 @@ export type MailDashboardCopy = {
   inboxBulkMarkReadAria: string;
   /** Seçili tüm iletilerin işaretini kaldır */
   inboxClearSelectionAria: string;
-  /** Genel kutu: HTML gövdeli iletide liste satırı rozet başlığı */
+  /** Gelen kutusu: HTML gövdeli iletide liste satırı rozet başlığı */
   inboxHtmlBadgeTitle: string;
   /** Spam klasörü: toplu işlem — gelen kutusuna geri al */
   spamBulkNotSpamLabel: string;
@@ -199,22 +200,16 @@ export type MailDashboardCopy = {
     quickNewMail: string;
     quickFilter: string;
     quickSearch: string;
-    /** Genel kutusu sayfası örnek iletileri */
+    /** Gelen kutusu sayfası örnek iletileri */
     inboxMockRows: GeneralInboxRow[];
     spamMockRows: InboxMockRow[];
-    /** Gönderilmiş: `from` alanı alıcı gösterimi için kullanılır */
-    sentMockRows: InboxMockRow[];
     draftsMockRows: DraftMockRow[];
-    trashMockRows: InboxMockRow[];
   };
 };
 
-/** Genel kutusu: tekrarlanan örnek satır sayısı; sonuna ayrıca HTML5 örnek iletisi eklenir */
+/** Gelen kutusu: tekrarlanan örnek satır sayısı; sonuna ayrıca HTML5 örnek iletisi eklenir */
 const INBOX_MOCK_ROW_COUNT = 70;
-const SPAM_MOCK_ROW_COUNT = 70;
-const SENT_MOCK_ROW_COUNT = 70;
 const DRAFTS_MOCK_ROW_COUNT = 70;
-const TRASH_MOCK_ROW_COUNT = 70;
 
 /** Aynı örnek satırı `count` kez üretir (benzersiz `id`). */
 function repeatInboxMockRow(seed: Omit<GeneralInboxRow, 'id'>, count: number): GeneralInboxRow[] {
@@ -224,41 +219,12 @@ function repeatInboxMockRow(seed: Omit<GeneralInboxRow, 'id'>, count: number): G
   }));
 }
 
-/** Spam listesi örnek satırlarını `count` adede tamamlar (yinelenen içerik, benzersiz `id`). */
-function repeatSpamMockRows(rows: InboxMockRow[], count: number): InboxMockRow[] {
-  if (rows.length === 0) return [];
-  if (rows.length >= count) return rows.slice(0, count);
-  return Array.from({ length: count }, (_, i) => ({
-    ...rows[i % rows.length],
-    id: `spam-${i + 1}`,
-  }));
-}
-
-/** Gönderilmiş listesi örnek satırlarını `count` adede tamamlar. */
-function repeatSentMockRows(rows: InboxMockRow[], count: number): InboxMockRow[] {
-  if (rows.length === 0) return [];
-  if (rows.length >= count) return rows.slice(0, count);
-  return Array.from({ length: count }, (_, i) => ({
-    ...rows[i % rows.length],
-    id: `sent-${i + 1}`,
-  }));
-}
-
 function repeatDraftsMockRows(rows: DraftMockRow[], count: number): DraftMockRow[] {
   if (rows.length === 0) return [];
   if (rows.length >= count) return rows.slice(0, count);
   return Array.from({ length: count }, (_, i) => ({
     ...rows[i % rows.length],
     id: `draft-${i + 1}`,
-  }));
-}
-
-function repeatTrashMockRows(rows: InboxMockRow[], count: number): InboxMockRow[] {
-  if (rows.length === 0) return [];
-  if (rows.length >= count) return rows.slice(0, count);
-  return Array.from({ length: count }, (_, i) => ({
-    ...rows[i % rows.length],
-    id: `trash-${i + 1}`,
   }));
 }
 
@@ -316,128 +282,6 @@ const enInboxHtmlDemoRow: GeneralInboxRow = {
   sentDayOffset: 0,
   sentClock: '18:45',
 };
-
-const trSpamMockSeeds: InboxMockRow[] = [
-  {
-    id: 's1',
-    from: 'Loto-Kazan',
-    subject: 'Hemen 50.000 TL ödeme',
-    preview: 'Tıklayın ve ödülünüzü alın; güvenli bağlantı…',
-    time: '10:02',
-    bodyText:
-      'Tebrikler! Büyük ödülünüz hazır. Güvenli bağlantıya tıklayın ve işlemi tamamlayın.\n\nBu tür iletilere güvenmeyin; şüpheli gönderenlerden gelen linklere tıklamayın.',
-  },
-  {
-    id: 's2',
-    from: 'banka-dogrula.net',
-    subject: 'Hesabınız askıya alındı',
-    preview: 'Kart bilgilerinizi güncellemeniz gerekiyor.',
-    time: 'Dün',
-    bodyText:
-      'Hesabınızın güvenliği için acilen giriş yapıp kart bilgilerinizi doğrulayın.\n\nResmi bankanız asla böyle bir e-posta ile bilgi istemez.',
-  },
-  {
-    id: 's3',
-    from: 'Prize Office',
-    subject: 'Tebrikler, seçildiniz',
-    preview: 'Kurye ücreti için küçük bir ödeme yeterli.',
-    time: 'Cmt',
-    bodyText:
-      'Ödülünüzü teslim etmek için küçük bir kurye ücreti ödemeniz yeterlidir.\n\nBu tip talepler genelde dolandırıcılıktır.',
-  },
-];
-
-const enSpamMockSeeds: InboxMockRow[] = [
-  {
-    id: 's1',
-    from: 'Lottery-Win',
-    subject: 'Claim your $10,000 now',
-    preview: 'Click here to receive your prize; secure link…',
-    time: '10:02',
-    bodyText:
-      'Congratulations! Your prize is ready. Click the secure link to complete the process.\n\nDo not trust messages like this; never click links from unknown senders.',
-  },
-  {
-    id: 's2',
-    from: 'verify-bank.net',
-    subject: 'Account suspended',
-    preview: 'Update your card details immediately.',
-    time: 'Yesterday',
-    bodyText:
-      'For your security, sign in and verify your card details urgently.\n\nYour real bank will never ask for this by email.',
-  },
-  {
-    id: 's3',
-    from: 'Prize Desk',
-    subject: 'Congratulations, you won',
-    preview: 'Pay a small courier fee to release your reward.',
-    time: 'Sat',
-    bodyText:
-      'You only need to pay a small courier fee to receive your reward.\n\nSuch requests are usually fraudulent.',
-  },
-];
-
-const trSentMockSeeds: InboxMockRow[] = [
-  {
-    id: 'o1',
-    from: 'ali.yildirim@firma.com',
-    subject: 'Toplantı özeti',
-    preview: 'Ekte sunulan notlar ve aksiyon maddeleri.',
-    time: '14:30',
-    bodyText:
-      'Merhaba,\n\nBugünkü toplantının notlarını ve aksiyon maddelerini ekte paylaşıyorum.\n\nİyi çalışmalar.',
-    attachmentNames: ['toplanti-notlari.pdf'],
-  },
-  {
-    id: 'o2',
-    from: 'destek@acme.com',
-    subject: 'Re: Teklif',
-    preview: 'Revize fiyat listesini iletiyorum.',
-    time: 'Dün',
-    bodyText:
-      'Merhaba,\n\nTalebiniz üzerine revize fiyat listesini ekte iletiyorum.\n\nSorularınız olursa yazabilirsiniz.',
-  },
-  {
-    id: 'o3',
-    from: 'ekip@ornek.com',
-    subject: 'Haftalık rapor',
-    preview: 'Bu haftanın metrikleri ve özet.',
-    time: 'Pzt',
-    bodyText:
-      'Selam ekip,\n\nHaftalık metrikler ve kısa özet ekte.\n\nKolay gelsin.',
-  },
-];
-
-const enSentMockSeeds: InboxMockRow[] = [
-  {
-    id: 'o1',
-    from: 'jane.doe@company.com',
-    subject: 'Meeting recap',
-    preview: 'Notes and action items from today.',
-    time: '2:30 PM',
-    bodyText:
-      'Hi,\n\nPlease find attached the notes and action items from today’s meeting.\n\nThanks.',
-    attachmentNames: ['meeting-notes.pdf'],
-  },
-  {
-    id: 'o2',
-    from: 'support@acme.com',
-    subject: 'Re: Proposal',
-    preview: 'Sharing the revised pricing sheet.',
-    time: 'Yesterday',
-    bodyText:
-      'Hello,\n\nAs requested, I’m sharing the revised pricing sheet in the attachment.\n\nLet me know if you have questions.',
-  },
-  {
-    id: 'o3',
-    from: 'team@example.com',
-    subject: 'Weekly report',
-    preview: 'Metrics and summary for this week.',
-    time: 'Mon',
-    bodyText:
-      'Team,\n\nWeekly metrics and a short summary are attached.\n\nCheers.',
-  },
-];
 
 const trDraftsMockSeeds: DraftMockRow[] = [
   {
@@ -497,69 +341,9 @@ const enDraftsMockSeeds: DraftMockRow[] = [
   },
 ];
 
-const trTrashMockSeeds: InboxMockRow[] = [
-  {
-    id: 't1',
-    from: 'Eski Proje',
-    subject: 'Eski duyuru: ofis taşınması',
-    preview: 'Bu ileti 30 gün sonra kalıcı olarak silinecek.',
-    time: 'Silindi: dün',
-    bodyText:
-      'Sayın çalışanlar,\n\nOfis taşınması ile ilgili eski duyuru metnidir. Bu ileti 30 gün sonra kalıcı olarak silinecektir.',
-  },
-  {
-    id: 't2',
-    from: 'Mağaza',
-    subject: 'İndirim kodunuz',
-    preview: 'Kampanya süresi doldu; ileti çöpe taşındı.',
-    time: 'Silindi: Pzt',
-    bodyText:
-      'Kampanya sona ermiştir. İndirim kodunuz artık geçerli değildir.\n\nİyi günler dileriz.',
-  },
-  {
-    id: 't3',
-    from: 'Bülten',
-    subject: 'Arşiv: Ocak özeti',
-    preview: 'Toplu temizlik ile çöp kutusuna alındı.',
-    time: 'Silindi: 12:05',
-    bodyText:
-      'Ocak ayı bülten özeti. Toplu temizlik sırasında çöp kutusuna taşındı.\n\nİstemediğiniz bültenleri abonelikten çıkabilirsiniz.',
-  },
-];
-
-const enTrashMockSeeds: InboxMockRow[] = [
-  {
-    id: 't1',
-    from: 'Old project',
-    subject: 'Archived: office move notice',
-    preview: 'This message will be permanently deleted after 30 days.',
-    time: 'Deleted: yesterday',
-    bodyText:
-      'Team,\n\nThis is an archived notice about the office move. It will be permanently deleted after 30 days.',
-  },
-  {
-    id: 't2',
-    from: 'Store',
-    subject: 'Your discount code',
-    preview: 'Campaign ended; message moved to trash.',
-    time: 'Deleted: Mon',
-    bodyText:
-      'The campaign has ended. Your discount code is no longer valid.\n\nThank you.',
-  },
-  {
-    id: 't3',
-    from: 'Newsletter',
-    subject: 'Archive: January digest',
-    preview: 'Bulk cleanup moved this to trash.',
-    time: 'Deleted: 12:05 PM',
-    bodyText:
-      'January digest archive. Moved to trash during bulk cleanup.\n\nYou can unsubscribe from newsletters you no longer want.',
-  },
-];
-
 const tr: MailDashboardCopy = {
   pageTitle: 'Gelen kutusu',
-  navGeneralInbox: 'Genel kutusu',
+  navGeneralInbox: 'Gelen kutusu',
   mailSidebarTitle: 'Posta',
   activePanelTitle: "Widget'lar",
   activePanelHint: 'İkona tıklayın: açıkken panoda, kapalıyken gizli.',
@@ -569,6 +353,7 @@ const tr: MailDashboardCopy = {
   sidebarBrand: 'MailMind',
   navDashboard: 'Pano',
   navCalendar: 'Takvim',
+  navStarred: 'Yıldızlılar',
   navSpam: 'Spam',
   navSent: 'Gönderilmiş',
   navDrafts: 'Taslaklar',
@@ -582,7 +367,7 @@ const tr: MailDashboardCopy = {
   composeSend: 'Gönder',
   composeClose: 'Kapat',
   composeBackAria: 'Geri dön',
-  composeMockHint: 'Bu ekran örnek veridir; ileti gerçekte gönderilmez.',
+  composeMockHint: '',
   navHome: 'Ana sayfa',
   navConnect: 'Hesap bağla',
   navSearchPlaceholder: 'Posta ve kişilerde ara…',
@@ -614,7 +399,7 @@ const tr: MailDashboardCopy = {
   inboxMoreActionsAria: 'Diğer işlemler',
   inboxPagePrevAria: 'Önceki sayfa',
   inboxPageNextAria: 'Sonraki sayfa',
-  inboxPageRangeTemplate: '{{start}}–{{end}} / {{total}}',
+  inboxPageRangeTemplate: '{{start}}-{{end}}/{{total}}',
   inboxPageRangeEmpty: '0 ileti',
   inboxBulkArchiveAria: 'Arşivle',
   inboxBulkDeleteAria: 'Sil',
@@ -642,7 +427,7 @@ const tr: MailDashboardCopy = {
     'quick-actions': 'Hızlı',
   },
   widgetTitles: {
-    inbox: 'Inbox (posta listesi)',
+    inbox: 'Gelen kutusu',
     unread: 'Okunmamış',
     starred: 'Yıldızlı / önemli',
     calendar: 'Takvim / toplantılar',
@@ -657,18 +442,7 @@ const tr: MailDashboardCopy = {
     statDaily: 'Bugün: 42 ileti',
     statRatio: 'Okunan %68 · okunmayan %32',
     calendarWeekdays: ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'],
-    calendarEventSeeds: [
-      { monthOffset: 0, day: 3, time: '10:00', title: 'Sprint planlama' },
-      { monthOffset: 0, day: 3, time: '15:30', title: 'Tasarım revizyonu' },
-      { monthOffset: 0, day: 7, time: '09:30', title: '1:1 görüşme' },
-      { monthOffset: 0, day: 15, time: '14:30', title: 'Müşteri görüşmesi' },
-      { monthOffset: 0, day: 22, time: '11:00', title: 'Ekip içi' },
-      { monthOffset: 0, day: 22, time: '16:00', title: 'Yedek slot' },
-      { monthOffset: 0, day: 23, time: '18:00', title: 'Ürün demosu' },
-      { monthOffset: -1, day: 12, time: '11:00', title: 'Geçmiş ay: bütçe' },
-      { monthOffset: 1, day: 8, time: '14:00', title: 'Gelecek ay: OKR' },
-      { monthOffset: 2, day: 20, time: '10:30', title: 'Çeyrek değerlendirme' },
-    ],
+    calendarEventSeeds: [],
     calendarSpecialDaySeeds: [
       {
         month: 0,
@@ -729,16 +503,14 @@ const tr: MailDashboardCopy = {
     quickFilter: 'Filtre uygula',
     quickSearch: 'Arama',
     inboxMockRows: [...repeatInboxMockRow(trInboxMockSeed, INBOX_MOCK_ROW_COUNT), trInboxHtmlDemoRow],
-    spamMockRows: repeatSpamMockRows(trSpamMockSeeds, SPAM_MOCK_ROW_COUNT),
-    sentMockRows: repeatSentMockRows(trSentMockSeeds, SENT_MOCK_ROW_COUNT),
+    spamMockRows: [],
     draftsMockRows: repeatDraftsMockRows(trDraftsMockSeeds, DRAFTS_MOCK_ROW_COUNT),
-    trashMockRows: repeatTrashMockRows(trTrashMockSeeds, TRASH_MOCK_ROW_COUNT),
   },
 };
 
 const en: MailDashboardCopy = {
   pageTitle: 'Mailbox',
-  navGeneralInbox: 'General inbox',
+  navGeneralInbox: 'Inbox',
   mailSidebarTitle: 'Mail',
   activePanelTitle: "Widgets",
   activePanelHint: 'Click an icon: visible on the board when on, hidden when off.',
@@ -748,6 +520,7 @@ const en: MailDashboardCopy = {
   sidebarBrand: 'MailMind',
   navDashboard: 'Dashboard',
   navCalendar: 'Calendar',
+  navStarred: 'Starred',
   navSpam: 'Spam',
   navSent: 'Sent',
   navDrafts: 'Drafts',
@@ -761,7 +534,7 @@ const en: MailDashboardCopy = {
   composeSend: 'Send',
   composeClose: 'Close',
   composeBackAria: 'Go back',
-  composeMockHint: 'This screen uses mock data; nothing is actually sent.',
+  composeMockHint: '',
   navHome: 'Home',
   navConnect: 'Connect account',
   navSearchPlaceholder: 'Search mail and people…',
@@ -793,7 +566,7 @@ const en: MailDashboardCopy = {
   inboxMoreActionsAria: 'More actions',
   inboxPagePrevAria: 'Previous page',
   inboxPageNextAria: 'Next page',
-  inboxPageRangeTemplate: '{{start}}–{{end}} of {{total}}',
+  inboxPageRangeTemplate: '{{start}}-{{end}}/{{total}}',
   inboxPageRangeEmpty: '0 messages',
   inboxBulkArchiveAria: 'Archive',
   inboxBulkDeleteAria: 'Delete',
@@ -821,7 +594,7 @@ const en: MailDashboardCopy = {
     'quick-actions': 'Quick',
   },
   widgetTitles: {
-    inbox: 'Inbox (mail list)',
+    inbox: 'Inbox',
     unread: 'Unread',
     starred: 'Starred / important',
     calendar: 'Calendar / meetings',
@@ -836,18 +609,7 @@ const en: MailDashboardCopy = {
     statDaily: 'Today: 42 messages',
     statRatio: 'Read 68% · unread 32%',
     calendarWeekdays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-    calendarEventSeeds: [
-      { monthOffset: 0, day: 3, time: '10:00 AM', title: 'Sprint planning' },
-      { monthOffset: 0, day: 3, time: '3:30 PM', title: 'Design review' },
-      { monthOffset: 0, day: 7, time: '9:30 AM', title: '1:1' },
-      { monthOffset: 0, day: 15, time: '2:30 PM', title: 'Client call' },
-      { monthOffset: 0, day: 22, time: '11:00 AM', title: 'Team sync' },
-      { monthOffset: 0, day: 22, time: '4:00 PM', title: 'Hold' },
-      { monthOffset: 0, day: 23, time: '6:00 PM', title: 'Product demo' },
-      { monthOffset: -1, day: 12, time: '11:00 AM', title: 'Past month: budget' },
-      { monthOffset: 1, day: 8, time: '2:00 PM', title: 'Next month: OKRs' },
-      { monthOffset: 2, day: 20, time: '10:30 AM', title: 'Quarterly review' },
-    ],
+    calendarEventSeeds: [],
     calendarSpecialDaySeeds: [
       {
         month: 0,
@@ -902,10 +664,8 @@ const en: MailDashboardCopy = {
     quickFilter: 'Apply filter',
     quickSearch: 'Search',
     inboxMockRows: [...repeatInboxMockRow(enInboxMockSeed, INBOX_MOCK_ROW_COUNT), enInboxHtmlDemoRow],
-    spamMockRows: repeatSpamMockRows(enSpamMockSeeds, SPAM_MOCK_ROW_COUNT),
-    sentMockRows: repeatSentMockRows(enSentMockSeeds, SENT_MOCK_ROW_COUNT),
+    spamMockRows: [],
     draftsMockRows: repeatDraftsMockRows(enDraftsMockSeeds, DRAFTS_MOCK_ROW_COUNT),
-    trashMockRows: repeatTrashMockRows(enTrashMockSeeds, TRASH_MOCK_ROW_COUNT),
   },
 };
 

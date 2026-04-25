@@ -61,6 +61,12 @@ export class MailboxSmtpService {
       ? `${account.displayName} <${account.email}>`
       : account.email;
 
+    const attachments = dto.attachments?.map((a) => ({
+      filename: a.filename,
+      content: Buffer.from(a.contentBase64, 'base64'),
+      contentType: a.contentType,
+    }));
+
     const info = await transporter.sendMail({
       from: fromAddress,
       to: dto.to.join(', '),
@@ -70,6 +76,7 @@ export class MailboxSmtpService {
       text: dto.text,
       html: dto.html,
       inReplyTo: dto.inReplyTo,
+      attachments,
     });
 
     this.logger.log(`Mail sent: messageId=${info.messageId} from=${account.email} to=${dto.to.join(',')}`);

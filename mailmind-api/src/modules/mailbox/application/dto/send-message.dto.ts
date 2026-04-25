@@ -1,4 +1,25 @@
-import { IsEmail, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsArray,
+  IsEmail,
+  IsOptional,
+  IsString,
+  MaxLength,
+  ValidateNested,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+
+export class SendMessageAttachmentDto {
+  @IsString()
+  filename: string;
+
+  /** Base64-encoded file contents (bare; "data:" prefix removed) */
+  @IsString()
+  contentBase64: string;
+
+  @IsOptional()
+  @IsString()
+  contentType?: string;
+}
 
 export class SendMessageDto {
   @IsEmail({}, { each: true })
@@ -28,4 +49,10 @@ export class SendMessageDto {
   @IsOptional()
   @IsString()
   inReplyTo?: string; // reply için: orijinal mesajın providerMessageId'si
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => SendMessageAttachmentDto)
+  attachments?: SendMessageAttachmentDto[];
 }

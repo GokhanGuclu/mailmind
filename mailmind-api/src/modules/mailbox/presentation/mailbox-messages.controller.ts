@@ -16,6 +16,7 @@ import { MailboxMessagesService } from '../application/mailbox-messages.service'
 import { MailboxSmtpService } from '../infrastructure/smtp/mailbox-smtp.service';
 import { ListMessagesDto } from '../application/dto/list-messages.dto';
 import { SendMessageDto } from '../application/dto/send-message.dto';
+import { MoveMessageDto } from '../application/dto/move-message.dto';
 
 @UseGuards(JwtAccessGuard)
 @Controller('mailbox/accounts/:accountId/messages')
@@ -41,6 +42,16 @@ export class MailboxMessagesController {
     return this.messagesSvc.list(this.getUserId(req), accountId, query);
   }
 
+  /** GET /mailbox/accounts/:accountId/messages/starred */
+  @Get('starred')
+  listStarred(
+    @Req() req: Request,
+    @Param('accountId') accountId: string,
+    @Query() query: ListMessagesDto,
+  ) {
+    return this.messagesSvc.listStarred(this.getUserId(req), accountId, query);
+  }
+
   /** GET /mailbox/accounts/:accountId/messages/unread-count */
   @Get('unread-count')
   unreadCount(
@@ -61,6 +72,16 @@ export class MailboxMessagesController {
     return this.messagesSvc.getOne(this.getUserId(req), accountId, id);
   }
 
+  /** PATCH /mailbox/accounts/:accountId/messages/:id/star */
+  @Patch(':id/star')
+  toggleStar(
+    @Req() req: Request,
+    @Param('accountId') accountId: string,
+    @Param('id') id: string,
+  ) {
+    return this.messagesSvc.toggleStar(this.getUserId(req), accountId, id);
+  }
+
   /** PATCH /mailbox/accounts/:accountId/messages/:id/read */
   @Patch(':id/read')
   markAsRead(
@@ -69,6 +90,27 @@ export class MailboxMessagesController {
     @Param('id') id: string,
   ) {
     return this.messagesSvc.markAsRead(this.getUserId(req), accountId, id);
+  }
+
+  /** PATCH /mailbox/accounts/:accountId/messages/:id/move */
+  @Patch(':id/move')
+  move(
+    @Req() req: Request,
+    @Param('accountId') accountId: string,
+    @Param('id') id: string,
+    @Body() dto: MoveMessageDto,
+  ) {
+    return this.messagesSvc.moveToFolder(this.getUserId(req), accountId, id, dto.folder);
+  }
+
+  /** POST /mailbox/accounts/:accountId/messages/:id/summarize */
+  @Post(':id/summarize')
+  summarize(
+    @Req() req: Request,
+    @Param('accountId') accountId: string,
+    @Param('id') id: string,
+  ) {
+    return this.messagesSvc.summarize(this.getUserId(req), accountId, id);
   }
 
   /** POST /mailbox/accounts/:accountId/messages/send */

@@ -18,6 +18,12 @@ export type FolderSyncResult = {
   maxUid: number | null;
 };
 
+type ImapConnectConfig =
+  | { mode: 'password'; creds: ImapCredentials }
+  | { mode: 'xoauth2'; host: string; port: number; email: string; accessToken: string };
+
+const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
+
 @Injectable()
 export class ImapProvider {
   private readonly logger = new Logger(ImapProvider.name);
@@ -27,13 +33,9 @@ export class ImapProvider {
     private readonly cipher: CredentialCipher,
   ) {}
 
-  /**
-   * IMAP sunucusundaki klasörleri keşfeder ve INBOX/SENT/TRASH/SPAM olarak sınıflandırır.
-   * Special-use flag'lere (\Sent, \Trash, \Junk) ve isim eşleşmesine dayanır.
-   */
   async discoverFolders(mailboxAccountId: string): Promise<FolderMeta[]> {
-    const creds = await this.loadImapCredentials(mailboxAccountId);
-    const client = this.createClient(creds);
+    const config = await this.resolveImapConfig(mailboxAccountId);
+    const client = this.createClient(config);
     await client.connect();
 
     try {
@@ -44,11 +46,6 @@ export class ImapProvider {
     }
   }
 
-  /**
-   * Belirli bir klasörü senkronize eder.
-   * - sinceUid verilmişse → UID > sinceUid olan yeni mesajları çeker (incremental)
-   * - sinceUid verilmemişse → son `limit` mesajı çeker (initial)
-   */
   async fetchFolder(args: {
     mailboxAccountId: string;
     folder: string;
@@ -58,8 +55,8 @@ export class ImapProvider {
   }): Promise<FolderSyncResult> {
     const { mailboxAccountId, folder, folderType, sinceUid, limit = 100 } = args;
 
-    const creds = await this.loadImapCredentials(mailboxAccountId);
-    const client = this.createClient(creds);
+    const config = await this.resolveImapConfig(mailboxAccountId);
+    const client = this.createClient(config);
     await client.connect();
 
     try {
@@ -67,7 +64,6 @@ export class ImapProvider {
       try {
         lock = await client.getMailboxLock(folder);
       } catch {
-        // Klasör yoksa sessizce atla
         this.logger.warn(`Folder "${folder}" not accessible for mailbox=${mailboxAccountId}`);
         return { messages: [], maxUid: null };
       }
@@ -81,11 +77,10 @@ export class ImapProvider {
         const messages: ProviderMessage[] = [];
         let maxUid: number | null = null;
 
-        // UID-based incremental fetch ya da sequence-based initial fetch
         const useUid = sinceUid !== undefined;
         const range = useUid
-          ? `${sinceUid + 1}:*`                          // yeni mesajlar
-          : `${Math.max(1, total - limit + 1)}:${total}`; // son N mesaj
+          ? `${sinceUid + 1}:*`
+          : `${Math.max(1, total - limit + 1)}:${total}`;
 
         for await (const msg of client.fetch(
           range,
@@ -93,7 +88,7 @@ export class ImapProvider {
           { uid: useUid },
         )) {
           const uid = Number(msg.uid);
-          if (useUid && uid <= sinceUid!) continue; // * bazen son UID'yi tekrar döner
+          if (useUid && uid <= sinceUid!) continue;
 
           if (maxUid === null || uid > maxUid) maxUid = uid;
 
@@ -155,16 +150,173 @@ export class ImapProvider {
     }
   }
 
+  /**
+   * Bir mesajı uzak IMAP sunucusunda \Seen bayrağı ile okundu olarak işaretler.
+   * Gmail/IMAP'te bu bayrak "okundu" anlamına gelir, karşı tarafa da yansır.
+   * `folderType` üzerinden gerçek klasör yolunu (ör. "[Gmail]/Sent Mail")
+   * discoverFolders ile bulur — özellikle Gmail için INBOX harici klasörlerde şart.
+   */
+  async setReadFlag(args: {
+    mailboxAccountId: string;
+    folderType: FolderType;
+    uid: number;
+    isRead: boolean;
+  }): Promise<void> {
+    const { mailboxAccountId, folderType, uid, isRead } = args;
+
+    const folders = await this.discoverFolders(mailboxAccountId);
+    const target = folders.find((f) => f.type === folderType);
+    const folderPath = target?.path ?? (folderType === 'INBOX' ? 'INBOX' : null);
+    if (!folderPath) {
+      throw new Error(`No folder path found for type=${folderType}`);
+    }
+
+    const config = await this.resolveImapConfig(mailboxAccountId);
+    const client = this.createClient(config);
+    await client.connect();
+
+    try {
+      let lock: any;
+      try {
+        lock = await client.getMailboxLock(folderPath);
+      } catch (err) {
+        this.logger.warn(
+          `setReadFlag: folder "${folderPath}" not accessible for mailbox=${mailboxAccountId}`,
+        );
+        return;
+      }
+
+      try {
+        const op = isRead ? 'messageFlagsAdd' : 'messageFlagsRemove';
+        await (client as any)[op](String(uid), ['\\Seen'], { uid: true });
+      } finally {
+        lock.release();
+      }
+    } finally {
+      await client.logout().catch(() => undefined);
+    }
+  }
+
   // ---------------------------------------------------------------------------
 
-  private createClient(creds: ImapCredentials): ImapFlow {
+  private createClient(config: ImapConnectConfig): ImapFlow {
+    const isDev = (process.env.NODE_ENV ?? 'development') === 'development';
+    const tls = isDev ? { rejectUnauthorized: false } : undefined;
+
+    if (config.mode === 'xoauth2') {
+      return new ImapFlow({
+        host: config.host,
+        port: config.port,
+        secure: true,
+        auth: { user: config.email, accessToken: config.accessToken },
+        logger: false,
+        tls,
+      });
+    }
+
     return new ImapFlow({
-      host: creds.host,
-      port: creds.port,
-      secure: creds.secure,
-      auth: { user: creds.username, pass: creds.password },
+      host: config.creds.host,
+      port: config.creds.port,
+      secure: config.creds.secure,
+      auth: { user: config.creds.username, pass: config.creds.password },
       logger: false,
+      tls,
     });
+  }
+
+  /**
+   * Determines the connection mode based on the MailboxAccount provider.
+   * - GMAIL → XOAUTH2 (access token from MailboxCredential, refresh if expired)
+   * - IMAP / OUTLOOK → standard password auth
+   */
+  private async resolveImapConfig(mailboxAccountId: string): Promise<ImapConnectConfig> {
+    const account = await this.prisma.mailboxAccount.findUnique({
+      where: { id: mailboxAccountId },
+      select: { provider: true, email: true },
+    });
+
+    if (!account) throw new Error(`MailboxAccount not found: ${mailboxAccountId}`);
+
+    if (account.provider === 'GMAIL') {
+      return this.resolveGmailOAuth(mailboxAccountId, account.email);
+    }
+
+    // Fallback: standard IMAP password auth
+    return { mode: 'password', creds: await this.loadImapCredentials(mailboxAccountId) };
+  }
+
+  private async resolveGmailOAuth(
+    mailboxAccountId: string,
+    email: string,
+  ): Promise<ImapConnectConfig> {
+    const cred = await this.prisma.mailboxCredential.findUnique({
+      where: { mailboxAccountId },
+      select: { accessToken: true, refreshToken: true, tokenExpiresAt: true },
+    });
+
+    if (!cred?.accessToken || !cred?.refreshToken) {
+      throw new Error(`Gmail OAuth credentials not found for mailbox=${mailboxAccountId}`);
+    }
+
+    let accessToken = cred.accessToken;
+
+    // Refresh if expired or about to expire (5-minute buffer)
+    const isExpired = cred.tokenExpiresAt
+      ? cred.tokenExpiresAt.getTime() < Date.now() + 5 * 60 * 1000
+      : true;
+
+    if (isExpired) {
+      this.logger.log(`Refreshing expired Google access token for mailbox=${mailboxAccountId}`);
+      accessToken = await this.refreshGoogleAccessToken(mailboxAccountId, cred.refreshToken);
+    }
+
+    return {
+      mode: 'xoauth2',
+      host: 'imap.gmail.com',
+      port: 993,
+      email,
+      accessToken,
+    };
+  }
+
+  private async refreshGoogleAccessToken(
+    mailboxAccountId: string,
+    refreshToken: string,
+  ): Promise<string> {
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    if (!clientId || !clientSecret) {
+      throw new Error('GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET not set');
+    }
+
+    const body = new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
+      grant_type: 'refresh_token',
+    });
+
+    const res = await fetch(GOOGLE_TOKEN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Google token refresh failed: ${res.status} ${text}`);
+    }
+
+    const data = (await res.json()) as { access_token: string; expires_in: number };
+    const expiresAt = new Date(Date.now() + data.expires_in * 1000);
+
+    // Persist refreshed token
+    await this.prisma.mailboxCredential.update({
+      where: { mailboxAccountId },
+      data: { accessToken: data.access_token, tokenExpiresAt: expiresAt },
+    });
+
+    return data.access_token;
   }
 
   private mapFolders(list: any[]): FolderMeta[] {
@@ -192,7 +344,6 @@ export class ImapProvider {
       }
     }
 
-    // INBOX kesinlikle ekle
     if (!hasInbox) result.unshift({ path: 'INBOX', type: 'INBOX' });
 
     return result;
