@@ -10,12 +10,13 @@ ALTER TABLE "IamUser" ADD COLUMN "timezone" TEXT NOT NULL DEFAULT 'Europe/Istanb
 -- AlterTable: Task rrule
 ALTER TABLE "Task" ADD COLUMN "rrule" TEXT;
 
--- AlterTable: CalendarEvent — recurrence + external system + status default
+-- AlterTable: CalendarEvent — recurrence + external system
+-- NOT: status default'unu PROPOSED'a çekme işlemi sonraki migration'da
+-- (Postgres yeni enum değerini aynı tx içinde DEFAULT olarak kullandırmıyor)
 ALTER TABLE "CalendarEvent" ADD COLUMN "rrule" TEXT;
 ALTER TABLE "CalendarEvent" ADD COLUMN "timezone" TEXT NOT NULL DEFAULT 'Europe/Istanbul';
 ALTER TABLE "CalendarEvent" ADD COLUMN "externalSystem" TEXT;
 ALTER TABLE "CalendarEvent" ADD COLUMN "externalId" TEXT;
-ALTER TABLE "CalendarEvent" ALTER COLUMN "status" SET DEFAULT 'PROPOSED';
 
 -- CreateTable: Reminder
 CREATE TABLE "Reminder" (
