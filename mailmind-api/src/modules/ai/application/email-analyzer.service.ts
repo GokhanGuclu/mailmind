@@ -4,6 +4,7 @@ import type { AiProviderPort, EmailContent } from './ports/ai-provider.port';
 import { AI_PROVIDER_TOKEN } from './ports/ai-provider.port';
 import { AnalysisResult } from '../domain/value-objects/analysis-result.vo';
 import { AiResponseParseError } from '../domain/errors/ai.errors';
+import { RecurrenceDetectorService } from './recurrence-detector.service';
 
 const BODY_MAX_CHARS = 2000;
 
@@ -15,6 +16,7 @@ export class EmailAnalyzerService {
     private readonly prisma: PrismaService,
     @Inject(AI_PROVIDER_TOKEN)
     private readonly aiProvider: AiProviderPort,
+    private readonly recurrence: RecurrenceDetectorService,
   ) {}
 
   /**
@@ -38,6 +40,7 @@ export class EmailAnalyzerService {
         id: true,
         userId: true,
         mailboxMessageId: true,
+        user: { select: { timezone: true } },
         message: {
           select: {
             folder: true,
@@ -59,6 +62,7 @@ export class EmailAnalyzerService {
       return;
     }
 
+    const userTimezone = analysis.user?.timezone ?? 'Europe/Istanbul';
     const content: EmailContent = {
       subject: analysis.message.subject ?? '(no subject)',
       from: analysis.message.from ?? 'unknown',
@@ -66,14 +70,16 @@ export class EmailAnalyzerService {
       bodyText: this.truncate(
         analysis.message.bodyText ?? analysis.message.snippet ?? '',
       ),
+      userTimezone,
+      nowIso: new Date().toISOString(),
     };
 
     try {
       const result = await this.aiProvider.analyzeEmail(content);
-      await this.persist(analysis.id, analysis.userId, result);
+      await this.persist(analysis.id, analysis.userId, result, userTimezone);
 
       this.logger.log(
-        `Analysis done id=${analysisId} tasks=${result.tasks.length} events=${result.calendarEvents.length}`,
+        `Analysis done id=${analysisId} tasks=${result.tasks.length} events=${result.calendarEvents.length} reminders=${result.reminders.length}`,
       );
     } catch (err: any) {
       const errorMessage = err instanceof AiResponseParseError
@@ -95,6 +101,7 @@ export class EmailAnalyzerService {
     analysisId: string,
     userId: string,
     result: AnalysisResult,
+    userTimezone: string,
   ): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       // AiAnalysis güncelle
@@ -109,8 +116,9 @@ export class EmailAnalyzerService {
         },
       });
 
-      // Task'ları kaydet
+      // Task'ları kaydet (rrule varsa doğrula)
       for (const t of result.tasks) {
+        const taskRrule = this.safeRrule(t.rrule);
         await tx.task.create({
           data: {
             userId,
@@ -118,13 +126,15 @@ export class EmailAnalyzerService {
             title: t.title,
             notes: t.notes ?? null,
             dueAt: t.dueAt ?? null,
+            rrule: taskRrule,
             priority: t.priority,
           },
         });
       }
 
-      // CalendarEvent'leri kaydet
+      // CalendarEvent'leri kaydet (rrule varsa doğrula)
       for (const e of result.calendarEvents) {
+        const eventRrule = this.safeRrule(e.rrule, e.startAt);
         await tx.calendarEvent.create({
           data: {
             userId,
@@ -134,10 +144,63 @@ export class EmailAnalyzerService {
             endAt: e.endAt ?? null,
             location: e.location ?? null,
             attendees: e.attendees?.length ? JSON.stringify(e.attendees) : null,
+            rrule: eventRrule,
+            timezone: e.timezone ?? userTimezone,
+            // status default olarak PROPOSED — kullanıcı onayı bekliyor
+          },
+        });
+      }
+
+      // Reminder'ları kaydet (RRULE doğrulaması: geçersizse PAUSED)
+      for (const r of result.reminders) {
+        if (!r.title || (!r.fireAt && !r.rrule)) continue;
+
+        let nextFireAt: Date | null = r.fireAt ?? null;
+        let status: 'ACTIVE' | 'PAUSED' = 'ACTIVE';
+        let validatedRrule: string | null = null;
+
+        if (r.rrule) {
+          const v = this.recurrence.validate(r.rrule, r.fireAt ?? new Date());
+          if (v.ok) {
+            validatedRrule = r.rrule.replace(/^RRULE:/i, '').trim();
+            nextFireAt = v.nextFireAt;
+          } else {
+            this.logger.warn(
+              `Invalid rrule from LLM (analysis=${analysisId}): ${v.error}; reminder paused for review`,
+            );
+            status = 'PAUSED';
+          }
+        }
+
+        await tx.reminder.create({
+          data: {
+            userId,
+            aiAnalysisId: analysisId,
+            title: r.title,
+            notes: r.notes ?? null,
+            fireAt: r.fireAt ?? null,
+            rrule: validatedRrule,
+            timezone: r.timezone ?? userTimezone,
+            nextFireAt,
+            status,
           },
         });
       }
     });
+  }
+
+  /**
+   * RRULE'ü doğrular; geçersizse null döner (kayıt yine yapılır ama recurrence olmaz).
+   * CalendarEvent için kullanılan varyant: dtstart vermek RRULE doğruluk kontrolünü iyileştirir.
+   */
+  private safeRrule(raw: string | null | undefined, dtstart?: Date): string | null {
+    if (!raw) return null;
+    const v = this.recurrence.validate(raw, dtstart ?? new Date());
+    if (!v.ok) {
+      this.logger.warn(`Dropping invalid rrule: ${v.error}`);
+      return null;
+    }
+    return raw.replace(/^RRULE:/i, '').trim();
   }
 
   private async markSkipped(analysisId: string): Promise<void> {

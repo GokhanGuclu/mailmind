@@ -1,12 +1,17 @@
 import { Injectable, Logger } from '@nestjs/common';
 import OpenAI from 'openai';
 import { AiProviderPort, EmailContent } from '../../application/ports/ai-provider.port';
-import { AnalysisResult, TaskResult, CalendarEventResult } from '../../domain/value-objects/analysis-result.vo';
+import {
+  AnalysisResult,
+  TaskResult,
+  CalendarEventResult,
+  ReminderResult,
+} from '../../domain/value-objects/analysis-result.vo';
 import { AiProviderError, AiResponseParseError } from '../../domain/errors/ai.errors';
 
-const SYSTEM_PROMPT = `Sen bir e-posta asistanısın. Verilen e-postayı analiz et ve yapılandırılmış bilgi çıkar.
+const SYSTEM_PROMPT = `Sen MailMind'ın e-posta analiz ajanısın. Verilen e-postayı analiz edip yapılandırılmış aksiyonlar çıkarırsın.
 
-SADECE aşağıdaki formatta geçerli bir JSON nesnesiyle yanıt ver (markdown yok, açıklama yok):
+YALNIZCA aşağıdaki formatta geçerli bir JSON nesnesiyle yanıt ver (markdown yok, açıklama yok):
 {
   "summary": "E-posta içeriğinin 2-3 cümlelik kısa Türkçe özeti",
   "tasks": [
@@ -14,7 +19,8 @@ SADECE aşağıdaki formatta geçerli bir JSON nesnesiyle yanıt ver (markdown y
       "title": "Eylem maddesi başlığı",
       "notes": "İsteğe bağlı ek bağlam veya null",
       "dueAt": "ISO 8601 tarih dizesi veya null",
-      "priority": "LOW" veya "MEDIUM" veya "HIGH"
+      "rrule": "RFC 5545 RRULE veya null",
+      "priority": "LOW" | "MEDIUM" | "HIGH"
     }
   ],
   "calendarEvents": [
@@ -23,16 +29,41 @@ SADECE aşağıdaki formatta geçerli bir JSON nesnesiyle yanıt ver (markdown y
       "startAt": "ISO 8601 tarih dizesi",
       "endAt": "ISO 8601 tarih dizesi veya null",
       "location": "Konum dizesi veya null",
-      "attendees": ["email@example.com"]
+      "attendees": ["email@example.com"],
+      "rrule": "RFC 5545 RRULE veya null"
+    }
+  ],
+  "reminders": [
+    {
+      "title": "Anımsatıcı başlığı",
+      "notes": "İsteğe bağlı veya null",
+      "fireAt": "ISO 8601 tek-seferlik zaman veya null",
+      "rrule": "RFC 5545 RRULE veya null"
     }
   ]
 }
 
-Kurallar:
-- tasks: yalnızca takip gerektiren gerçek eylem maddeleri. Yoksa boş dizi.
-- calendarEvents: yalnızca net tarih/saati olan etkinlikler. Yoksa boş dizi.
-- summary: HER ZAMAN Türkçe yaz, e-postanın dilinden bağımsız olarak.
-- SADECE JSON nesnesiyle yanıt ver. Önce veya sonra ekstra metin olmadan.`;
+KURALLAR:
+1. Tarihleri DAİMA kullanıcının saat dilimine göre yorumla. Çıktı ISO 8601 olmalı (offset belirt).
+2. "yarın", "Pazartesi", "ay sonu" gibi göreceli ifadeleri verilen "Şu anki zaman"a göre çöz.
+3. TEKRARLAYAN ifadeler için RFC 5545 RRULE üret:
+   - "her gün"           → "FREQ=DAILY"
+   - "her hafta sonu"    → "FREQ=WEEKLY;BYDAY=SA,SU"
+   - "her Pazartesi"     → "FREQ=WEEKLY;BYDAY=MO"
+   - "ayın ilk Cuması"   → "FREQ=MONTHLY;BYDAY=1FR"
+   - "iki haftada bir"   → "FREQ=WEEKLY;INTERVAL=2"
+   - "yılda bir"         → "FREQ=YEARLY"
+4. Aksiyon türü seçimi:
+   - Net tarih/saatli olay (toplantı, randevu, uçuş)        → calendarEvents
+   - Tarih/saatli + tekrarlayan toplantı                    → calendarEvents (rrule ile)
+   - Yapılması gereken iş, deadline'lı veya değil           → tasks
+   - Tek seferlik veya tekrarlayan hatırlatma (ilaç, kontrol) → reminders
+5. Bir tekrarlı toplantı invite'ı varsa SADECE calendarEvents'e yaz (rrule ile), reminders'a YAZMA.
+6. Belirsiz tarihlerde ("yakında", "bir ara") fireAt VERME — TASK olarak çıkar.
+7. tasks/calendarEvents/reminders alanlarından her biri için aksiyon yoksa BOŞ DİZİ döndür.
+8. Pazarlama / bülten / otomatik bildirim mailleri için tüm dizileri BOŞ döndür.
+9. summary: HER ZAMAN Türkçe yaz, e-postanın dilinden bağımsız.
+10. SADECE JSON nesnesiyle yanıt ver. Önce veya sonra ekstra metin olmadan.`;
 
 @Injectable()
 export class OllamaProvider implements AiProviderPort {
@@ -43,7 +74,7 @@ export class OllamaProvider implements AiProviderPort {
   constructor() {
     this.client = new OpenAI({
       baseURL: process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434/v1',
-      apiKey: 'ollama', // Ollama'da gerekli ama kullanılmıyor
+      apiKey: 'ollama',
     });
     this.modelName = process.env.OLLAMA_MODEL ?? 'qwen2.5:7b-instruct';
   }
@@ -59,7 +90,8 @@ export class OllamaProvider implements AiProviderPort {
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: userMessage },
         ],
-        temperature: 0.1, // düşük sıcaklık = tutarlı yapılandırılmış çıktı
+        temperature: 0.1,
+        response_format: { type: 'json_object' },
       });
       raw = response.choices[0]?.message?.content ?? '';
     } catch (err: any) {
@@ -73,6 +105,10 @@ export class OllamaProvider implements AiProviderPort {
 
   private buildUserMessage(content: EmailContent): string {
     return [
+      `Kullanıcı saat dilimi: ${content.userTimezone}`,
+      `Şu anki zaman (UTC): ${content.nowIso}`,
+      ``,
+      `--- E-posta ---`,
       `Date: ${content.date.toISOString()}`,
       `From: ${content.from}`,
       `Subject: ${content.subject}`,
@@ -83,7 +119,6 @@ export class OllamaProvider implements AiProviderPort {
   }
 
   private parseResponse(raw: string): AnalysisResult {
-    // Model bazen JSON'u markdown code block içine sarar, temizle
     const cleaned = raw
       .replace(/^```json\s*/i, '')
       .replace(/^```\s*/i, '')
@@ -94,7 +129,6 @@ export class OllamaProvider implements AiProviderPort {
     try {
       parsed = JSON.parse(cleaned);
     } catch {
-      // JSON bulunamadıysa, metinden çıkarmayı dene
       const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new AiResponseParseError(raw.slice(0, 500));
       try {
@@ -108,6 +142,7 @@ export class OllamaProvider implements AiProviderPort {
       summary: String(parsed.summary ?? ''),
       tasks: this.parseTasks(parsed.tasks),
       calendarEvents: this.parseEvents(parsed.calendarEvents),
+      reminders: this.parseReminders(parsed.reminders),
     };
   }
 
@@ -119,6 +154,7 @@ export class OllamaProvider implements AiProviderPort {
         title: String(t.title).slice(0, 500),
         notes: t.notes ? String(t.notes) : undefined,
         dueAt: t.dueAt ? this.safeDate(t.dueAt) : null,
+        rrule: this.safeRruleString(t.rrule),
         priority: this.parsePriority(t.priority),
       }));
   }
@@ -135,8 +171,23 @@ export class OllamaProvider implements AiProviderPort {
         attendees: Array.isArray(e.attendees)
           ? e.attendees.map(String).filter(Boolean)
           : [],
+        rrule: this.safeRruleString(e.rrule),
+        timezone: e.timezone ? String(e.timezone) : undefined,
       }))
       .filter((e) => e.startAt !== null);
+  }
+
+  private parseReminders(raw: unknown): ReminderResult[] {
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .filter((r) => r?.title && (r?.fireAt || r?.rrule))
+      .map((r) => ({
+        title: String(r.title).slice(0, 500),
+        notes: r.notes ? String(r.notes) : null,
+        fireAt: r.fireAt ? this.safeDate(r.fireAt) : null,
+        rrule: this.safeRruleString(r.rrule),
+        timezone: r.timezone ? String(r.timezone) : undefined,
+      }));
   }
 
   private parsePriority(raw: unknown): 'LOW' | 'MEDIUM' | 'HIGH' {
@@ -148,5 +199,12 @@ export class OllamaProvider implements AiProviderPort {
     if (!raw) return null;
     const d = new Date(String(raw));
     return isNaN(d.getTime()) ? null : d;
+  }
+
+  private safeRruleString(raw: unknown): string | null {
+    if (!raw || typeof raw !== 'string') return null;
+    const trimmed = raw.trim();
+    if (!trimmed || trimmed.toLowerCase() === 'null') return null;
+    return trimmed;
   }
 }

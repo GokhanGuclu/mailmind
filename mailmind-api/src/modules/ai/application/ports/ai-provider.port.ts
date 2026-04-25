@@ -5,6 +5,12 @@ export type EmailContent = {
   from: string;
   date: Date;
   bodyText: string; // truncated
+
+  /** IANA timezone (örn "Europe/Istanbul") — LLM'in göreceli tarihleri çözmesi için */
+  userTimezone: string;
+
+  /** "Şu anki zaman" — LLM'in "yarın", "Pazartesi" gibi ifadeleri çözmesi için */
+  nowIso: string;
 };
 
 export interface AiProviderPort {

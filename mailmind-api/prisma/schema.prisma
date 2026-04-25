@@ -49,7 +49,11 @@ model IamUser {
   aiAnalyses      AiAnalysis[]
   tasks           Task[]
   calendarEvents  CalendarEvent[]
+  reminders       Reminder[]
   drafts          MailDraft[]
+
+  /** IANA timezone, prompt'ta LLM'e veriliyor; default Türkiye */
+  timezone String @default("Europe/Istanbul")
 }
 
 model IamSession {
@@ -202,6 +206,7 @@ model AiAnalysis {
 
   tasks          Task[]
   calendarEvents CalendarEvent[]
+  reminders      Reminder[]
 
   @@index([userId, status])
   @@index([mailboxMessageId])
@@ -227,6 +232,7 @@ model Task {
   title        String
   notes        String?
   dueAt        DateTime?
+  rrule        String?      // RFC 5545; tekrarlayan görev (örn "her hafta rapor")
   status       TaskStatus   @default(PENDING)
   priority     TaskPriority @default(MEDIUM)
   createdAt    DateTime     @default(now())
@@ -240,30 +246,75 @@ model Task {
 }
 
 enum CalendarEventStatus {
-  PENDING
-  CONFIRMED
+  PROPOSED   // AI önerdi, kullanıcı onayı bekliyor
+  PENDING    // onaylandı, dış sistem (Google Calendar) push bekliyor
+  CONFIRMED  // dış sistemde de yazıldı
   CANCELLED
 }
 
 model CalendarEvent {
-  id           String              @id @default(cuid())
-  userId       String
-  aiAnalysisId String?
-  title        String
-  description  String?
-  startAt      DateTime
-  endAt        DateTime?
-  location     String?
-  attendees    String?             // JSON array string: ["a@x.com", "b@x.com"]
-  status       CalendarEventStatus @default(PENDING)
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
+  id             String              @id @default(cuid())
+  userId         String
+  aiAnalysisId   String?
+  title          String
+  description    String?
+  startAt        DateTime
+  endAt          DateTime?
+  location       String?
+  attendees      String?             // JSON array string: ["a@x.com", "b@x.com"]
+  rrule          String?             // RFC 5545 RRULE; tekrarlayan etkinlikler için
+  timezone       String              @default("Europe/Istanbul")
+  externalSystem String?             // örn "google_calendar"
+  externalId     String?             // örn Google Calendar event id
+  status         CalendarEventStatus @default(PROPOSED)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
 
   user       IamUser     @relation(fields: [userId], references: [id], onDelete: Cascade)
   aiAnalysis AiAnalysis? @relation(fields: [aiAnalysisId], references: [id], onDelete: SetNull)
 
   @@index([userId, startAt])
   @@index([userId, status])
+}
+
+enum ReminderStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+model Reminder {
+  id           String         @id @default(cuid())
+  userId       String
+  aiAnalysisId String?
+  title        String
+  notes        String?
+
+  /** Tek seferlik anımsatıcı için. */
+  fireAt DateTime?
+
+  /** RFC 5545 RRULE string (örn "FREQ=WEEKLY;BYDAY=MO"). Tekrarlayan ise dolu. */
+  rrule String?
+
+  /** IANA timezone; LLM bunu kullanıcı bağlamından alıp doldurur. */
+  timezone String @default("Europe/Istanbul")
+
+  /** Worker'ın hızlı sorgusu için pre-compute edilmiş; rrule'dan üretilir. */
+  nextFireAt DateTime?
+
+  /** Son tetiklenme zamanı (audit + duplicate koruma). */
+  lastFiredAt DateTime?
+
+  status    ReminderStatus @default(ACTIVE)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  user       IamUser     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  aiAnalysis AiAnalysis? @relation(fields: [aiAnalysisId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+  @@index([status, nextFireAt]) // scheduler'ın "şimdi tetiklenmesi gerekenler" sorgusu
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
