@@ -47,23 +47,61 @@ KURALLAR:
 1. Tarihleri DAİMA kullanıcının saat dilimine göre yorumla. Çıktı ISO 8601 olmalı (offset belirt).
 2. "yarın", "Pazartesi", "ay sonu" gibi göreceli ifadeleri verilen "Şu anki zaman"a göre çöz.
 3. TEKRARLAYAN ifadeler için RFC 5545 RRULE üret:
-   - "her gün"           → "FREQ=DAILY"
-   - "her hafta sonu"    → "FREQ=WEEKLY;BYDAY=SA,SU"
-   - "her Pazartesi"     → "FREQ=WEEKLY;BYDAY=MO"
-   - "ayın ilk Cuması"   → "FREQ=MONTHLY;BYDAY=1FR"
-   - "iki haftada bir"   → "FREQ=WEEKLY;INTERVAL=2"
-   - "yılda bir"         → "FREQ=YEARLY"
-4. Aksiyon türü seçimi:
-   - Net tarih/saatli olay (toplantı, randevu, uçuş)        → calendarEvents
-   - Tarih/saatli + tekrarlayan toplantı                    → calendarEvents (rrule ile)
-   - Yapılması gereken iş, deadline'lı veya değil           → tasks
-   - Tek seferlik veya tekrarlayan hatırlatma (ilaç, kontrol) → reminders
-5. Bir tekrarlı toplantı invite'ı varsa SADECE calendarEvents'e yaz (rrule ile), reminders'a YAZMA.
-6. Belirsiz tarihlerde ("yakında", "bir ara") fireAt VERME — TASK olarak çıkar.
+   - "her gün" / "her sabah" / "her akşam"  → "FREQ=DAILY"
+   - "her hafta sonu"                       → "FREQ=WEEKLY;BYDAY=SA,SU"
+   - "her Pazartesi"                        → "FREQ=WEEKLY;BYDAY=MO"
+   - "ayın ilk Cuması"                      → "FREQ=MONTHLY;BYDAY=1FR"
+   - "iki haftada bir"                      → "FREQ=WEEKLY;INTERVAL=2"
+   - "yılda bir"                            → "FREQ=YEARLY"
+4. Aksiyon türü seçimi (TEK BİR yere yaz, ASLA birden fazla yere değil):
+   - Net tarih/saatli olay (toplantı, randevu, uçuş, görüşme) → calendarEvents
+   - Tarih/saatli + tekrarlayan toplantı                       → calendarEvents (rrule ile)
+   - Yapılması gereken iş, deadline'lı veya değil              → tasks
+   - Kişisel hatırlatma — tek seferlik veya tekrarlayan
+     (ilaç, su iç, kontrol, doğum günü)                        → reminders
+5. ÖNEMLİ: Aynı konuyu iki yere YAZMA.
+   - Tekrarlı bir reminder ürettiysen, aynı şeyi tasks'a EKLEME.
+   - Tekrarlı bir calendarEvent (rrule'lu) ürettiysen, aynı şeyi reminders'a EKLEME.
+   - Bir toplantı + ön hazırlık iki AYRI iş ise: calendarEvent (toplantı) + task (hazırlık) ayrı yazılır.
+6. Belirsiz tarihlerde ("yakında", "bir ara") fireAt/dueAt VERME — TASK olarak çıkar veya hiç çıkarma.
 7. tasks/calendarEvents/reminders alanlarından her biri için aksiyon yoksa BOŞ DİZİ döndür.
 8. Pazarlama / bülten / otomatik bildirim mailleri için tüm dizileri BOŞ döndür.
 9. summary: HER ZAMAN Türkçe yaz, e-postanın dilinden bağımsız.
-10. SADECE JSON nesnesiyle yanıt ver. Önce veya sonra ekstra metin olmadan.`;
+10. SADECE JSON nesnesiyle yanıt ver. Önce veya sonra ekstra metin olmadan.
+
+ÖRNEKLER (kuralları pekiştirmek için):
+
+Örnek A — "Her sabah 08:00'de ilacı al, 30 gün boyunca":
+{
+  "summary": "Doktor reçete edilen ilacın her sabah 08:00'de düzenli alınmasını istiyor.",
+  "tasks": [],
+  "calendarEvents": [],
+  "reminders": [
+    { "title": "İlaç al", "notes": "Her sabah 08:00, 30 gün", "fireAt": null, "rrule": "FREQ=DAILY;COUNT=30" }
+  ]
+}
+
+Örnek B — "Çarşamba 11:00'de XYZ ile görüşme; öncesinde profil dokümanını incele":
+{
+  "summary": "Çarşamba 11:00'de XYZ Holding ile online görüşme; öncesinde müşteri profili incelenecek.",
+  "tasks": [
+    { "title": "XYZ müşteri profil dokümanını incele", "notes": "Görüşme öncesi hazırlık", "dueAt": null, "rrule": null, "priority": "MEDIUM" }
+  ],
+  "calendarEvents": [
+    { "title": "XYZ Holding ile görüşme", "startAt": "<Çarşamba 11:00 ISO>", "endAt": null, "location": null, "attendees": [], "rrule": null }
+  ],
+  "reminders": []
+}
+
+Örnek C — "Her Pazartesi 09:00 standup, 30 dakika":
+{
+  "summary": "Her Pazartesi 09:00'da 30 dakikalık ekip standup'ı yapılacak.",
+  "tasks": [],
+  "calendarEvents": [
+    { "title": "Haftalık standup", "startAt": "<ilk Pazartesi 09:00 ISO>", "endAt": "<+30dk>", "location": null, "attendees": [], "rrule": "FREQ=WEEKLY;BYDAY=MO" }
+  ],
+  "reminders": []
+}`;
 
 @Injectable()
 export class OllamaProvider implements AiProviderPort {

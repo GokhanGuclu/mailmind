@@ -50,10 +50,23 @@ function checkRange(label: string, actual: number, range: CountRange, failures: 
   }
 }
 
+/**
+ * Türkçe I/İ duyarlı, aksanları düzleyen küçük harf normalizasyonu.
+ * Default JS `İ.toLowerCase()` = "i̇" (i + combining dot above) — match'i bozar.
+ */
+function normalize(s: string): string {
+  return (s ?? '')
+    .replace(/İ/g, 'i')
+    .replace(/I/g, 'i')
+    .toLocaleLowerCase('tr-TR')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '');
+}
+
 function checkContainsAny(label: string, value: string, needles: string[], failures: string[]) {
   if (!needles?.length) return;
-  const lower = (value ?? '').toLowerCase();
-  const ok = needles.some((n) => lower.includes(n.toLowerCase()));
+  const lower = normalize(value);
+  const ok = needles.some((n) => lower.includes(normalize(n)));
   if (!ok) {
     failures.push(`${label}: "${value}" should contain one of [${needles.join(', ')}]`);
   }
