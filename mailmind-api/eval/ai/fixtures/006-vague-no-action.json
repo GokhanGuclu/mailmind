@@ -1,0 +1,16 @@
+{
+  "name": "Vague mention — should produce no event/reminder",
+  "input": {
+    "subject": "Selam",
+    "from": "arkadas@example.com",
+    "date": "2026-04-25T08:00:00Z",
+    "bodyText": "Selam, nasılsın? Yakında bir ara konuşalım, kahve içelim. Müsait olduğun bir zaman varsa söyle.",
+    "userTimezone": "Europe/Istanbul",
+    "nowIso": "2026-04-25T08:00:00Z"
+  },
+  "expected": {
+    "tasks": { "min": 0, "max": 1 },
+    "calendarEvents": { "min": 0, "max": 0 },
+    "reminders": { "min": 0, "max": 0 }
+  }
+}

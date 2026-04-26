@@ -1,0 +1,20 @@
+{
+  "name": "Meeting + follow-up task",
+  "input": {
+    "subject": "Müşteri görüşmesi ve ön hazırlık",
+    "from": "satis@firma.com",
+    "date": "2026-04-25T08:00:00Z",
+    "bodyText": "Merhaba, Çarşamba saat 11:00'de XYZ Holding ile online görüşmemiz var. Görüşmeden önce müşteri profil dokümanını incele ve sorularını hazırla.",
+    "userTimezone": "Europe/Istanbul",
+    "nowIso": "2026-04-25T08:00:00Z"
+  },
+  "expected": {
+    "tasks": { "min": 1, "max": 3 },
+    "calendarEvents": { "min": 1, "max": 1 },
+    "reminders": { "min": 0, "max": 0 },
+    "calendarEvent": {
+      "titleContains": ["XYZ", "görüş", "müşteri"],
+      "rruleNull": true
+    }
+  }
+}

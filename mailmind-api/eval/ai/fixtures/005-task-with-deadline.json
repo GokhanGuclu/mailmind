@@ -1,0 +1,21 @@
+{
+  "name": "Task with Friday deadline",
+  "input": {
+    "subject": "Q2 raporu",
+    "from": "yonetici@firma.com",
+    "date": "2026-04-25T08:00:00Z",
+    "bodyText": "Merhaba, Q2 finansal raporunu Cuma günü mesai bitimine kadar göndermeni rica ediyorum. Önemli bir sunum için lazım.",
+    "userTimezone": "Europe/Istanbul",
+    "nowIso": "2026-04-25T08:00:00Z"
+  },
+  "expected": {
+    "tasks": { "min": 1, "max": 1 },
+    "calendarEvents": { "min": 0, "max": 0 },
+    "reminders": { "min": 0, "max": 1 },
+    "task": {
+      "titleContains": ["rapor", "Q2"],
+      "rruleNull": true,
+      "dueAtNotNull": true
+    }
+  }
+}

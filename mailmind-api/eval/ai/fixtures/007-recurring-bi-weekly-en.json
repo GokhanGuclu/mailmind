@@ -1,0 +1,21 @@
+{
+  "name": "Bi-weekly demo every other Friday (EN)",
+  "input": {
+    "subject": "Bi-weekly demo schedule",
+    "from": "pm@company.com",
+    "date": "2026-04-25T08:00:00Z",
+    "bodyText": "Hi team, starting next week we'll have our team demo every other Friday at 4pm. Duration: 45 minutes. First demo is May 1st.",
+    "userTimezone": "Europe/Istanbul",
+    "nowIso": "2026-04-25T08:00:00Z"
+  },
+  "expected": {
+    "tasks": { "min": 0, "max": 1 },
+    "calendarEvents": { "min": 1, "max": 1 },
+    "reminders": { "min": 0, "max": 0 },
+    "calendarEvent": {
+      "titleContains": ["demo"],
+      "rruleContains": ["FREQ=WEEKLY", "INTERVAL=2"],
+      "rruleByday": "FR"
+    }
+  }
+}

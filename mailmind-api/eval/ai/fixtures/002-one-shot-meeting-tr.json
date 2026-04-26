@@ -1,0 +1,21 @@
+{
+  "name": "One-shot meeting next Tuesday 14:00",
+  "input": {
+    "subject": "Proje değerlendirme toplantısı",
+    "from": "ahmet@firma.com",
+    "date": "2026-04-25T08:00:00Z",
+    "bodyText": "Merhaba, önümüzdeki Salı saat 14:00'te 1 saatlik proje değerlendirme toplantımız var. Yer: Toplantı Odası A. Lütfen sunum dosyalarını hazır getirin.",
+    "userTimezone": "Europe/Istanbul",
+    "nowIso": "2026-04-25T08:00:00Z"
+  },
+  "expected": {
+    "tasks": { "min": 0, "max": 2 },
+    "calendarEvents": { "min": 1, "max": 1 },
+    "reminders": { "min": 0, "max": 0 },
+    "calendarEvent": {
+      "titleContains": ["proje", "toplant", "değerlendirme"],
+      "rruleNull": true,
+      "locationContains": ["Toplantı Odası A", "A"]
+    }
+  }
+}

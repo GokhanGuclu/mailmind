@@ -1,0 +1,16 @@
+{
+  "name": "Marketing newsletter — should skip",
+  "input": {
+    "subject": "🔥 Bahar İndirimleri Başladı! %50'ye varan fırsatlar",
+    "from": "noreply@magaza.com",
+    "date": "2026-04-25T08:00:00Z",
+    "bodyText": "Sevgili müşterimiz, bahar indirimlerimiz başladı! En yeni koleksiyonda %50'ye varan indirimleri kaçırmayın. Hemen alışverişe başlayın. Aboneliğinizi iptal etmek için tıklayın.",
+    "userTimezone": "Europe/Istanbul",
+    "nowIso": "2026-04-25T08:00:00Z"
+  },
+  "expected": {
+    "tasks": { "min": 0, "max": 0 },
+    "calendarEvents": { "min": 0, "max": 0 },
+    "reminders": { "min": 0, "max": 0 }
+  }
+}
