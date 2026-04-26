@@ -50,6 +50,7 @@ model IamUser {
   tasks           Task[]
   calendarEvents  CalendarEvent[]
   reminders       Reminder[]
+  notifications   Notification[]
   drafts          MailDraft[]
 
   /** IANA timezone, prompt'ta LLM'e veriliyor; default Türkiye */
@@ -315,6 +316,32 @@ model Reminder {
 
   @@index([userId, status])
   @@index([status, nextFireAt]) // scheduler'ın "şimdi tetiklenmesi gerekenler" sorgusu
+}
+
+enum NotificationType {
+  REMINDER_FIRED
+  AI_PROPOSAL
+  SYSTEM
+}
+
+model Notification {
+  id         String           @id @default(cuid())
+  userId     String
+  type       NotificationType
+  title      String
+  body       String?
+  /** Kaynağın türü: "reminder" | "calendar_event" | "task" | null (system) */
+  sourceType String?
+  /** Kaynak entity'nin id'si (örn Reminder.id) */
+  sourceId   String?
+  isRead     Boolean          @default(false)
+  readAt     DateTime?
+  createdAt  DateTime         @default(now())
+
+  user IamUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead, createdAt])
+  @@index([userId, createdAt])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

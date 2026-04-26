@@ -8,6 +8,7 @@ import { CalendarModule } from './modules/calendar/calendar.module';
 import { AiModule } from './modules/ai/ai.module';
 import { IntegrationsModule } from './modules/integrations/integrations.module';
 import { DraftsModule } from './modules/drafts/drafts.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { DraftsModule } from './modules/drafts/drafts.module';
     AiModule,
     IntegrationsModule,
     DraftsModule,
+    NotificationsModule,
   ],
   controllers: [HealthController],
 })

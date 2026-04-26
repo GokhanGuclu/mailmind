@@ -9,8 +9,10 @@ import { ReminderSchedulerService } from './application/reminder-scheduler.servi
 import { OllamaProvider } from './infrastructure/ollama/ollama.provider';
 import { AiAnalysisRepository } from './infrastructure/persistence/ai-analysis.repository.prisma';
 import { AI_PROVIDER_TOKEN } from './application/ports/ai-provider.port';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
+  imports: [NotificationsModule],
   controllers: [AiAnalysisController, AiComposeController],
   providers: [
     // Port → Implementation bağlantısı

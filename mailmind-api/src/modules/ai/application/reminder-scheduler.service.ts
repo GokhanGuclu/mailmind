@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service';
+import { NotificationsService } from '../../notifications/application/notifications.service';
 import { RecurrenceDetectorService } from './recurrence-detector.service';
 
 const DEFAULT_INTERVAL_MS = 60_000;
@@ -26,6 +27,7 @@ export class ReminderSchedulerService implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly prisma: PrismaService,
     private readonly recurrence: RecurrenceDetectorService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   onModuleInit() {
@@ -114,8 +116,6 @@ export class ReminderSchedulerService implements OnModuleInit, OnModuleDestroy {
     },
     now: Date,
   ): Promise<void> {
-    // Şu aşamada "tetikleme" = yapısal log. Frontend GET /reminders ile lastFiredAt
-    // üzerinden gösterebilir. Notification transport'u sonraki PR.
     this.logger.log(
       `[REMINDER FIRED] id=${reminder.id} user=${reminder.userId} title="${reminder.title}" recurring=${!!reminder.rrule}`,
     );
@@ -124,19 +124,30 @@ export class ReminderSchedulerService implements OnModuleInit, OnModuleDestroy {
     let status: 'ACTIVE' | 'COMPLETED' = 'COMPLETED';
 
     if (reminder.rrule) {
-      // Tekrarlı: bir sonraki occurrence'ı bul (mevcut nextFireAt'ten sonra)
       const after = reminder.nextFireAt ?? now;
       nextFireAt = this.recurrence.computeNextFireAt(reminder.rrule, after);
       status = nextFireAt ? 'ACTIVE' : 'COMPLETED';
     }
 
-    await this.prisma.reminder.update({
-      where: { id: reminder.id },
-      data: {
-        lastFiredAt: now,
-        nextFireAt,
-        status,
-      },
+    // Notification + reminder güncelleme tek transaction'da; iki kayıt ya da hiç.
+    await this.prisma.$transaction(async (tx) => {
+      await tx.reminder.update({
+        where: { id: reminder.id },
+        data: { lastFiredAt: now, nextFireAt, status },
+      });
+
+      await tx.notification.create({
+        data: {
+          userId: reminder.userId,
+          type: 'REMINDER_FIRED',
+          title: reminder.title,
+          body: reminder.rrule
+            ? `Tekrarlayan anımsatıcı tetiklendi.${nextFireAt ? ` Sıradaki: ${nextFireAt.toISOString()}` : ' Tamamlandı.'}`
+            : 'Anımsatıcı tetiklendi.',
+          sourceType: 'reminder',
+          sourceId: reminder.id,
+        },
+      });
     });
   }
 }
