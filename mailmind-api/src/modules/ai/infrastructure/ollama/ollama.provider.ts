@@ -114,7 +114,9 @@ export class OllamaProvider implements AiProviderPort {
       baseURL: process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434/v1',
       apiKey: 'ollama',
     });
-    this.modelName = process.env.OLLAMA_MODEL ?? 'qwen2.5:7b-instruct';
+    // llama3.1:8b doğrulandı: eval seti üzerinde 8/8 (qwen2.5:7b 7/8'di).
+    // Override etmek için: OLLAMA_MODEL env değişkeni.
+    this.modelName = process.env.OLLAMA_MODEL ?? 'llama3.1:8b';
   }
 
   async analyzeEmail(content: EmailContent): Promise<AnalysisResult> {
