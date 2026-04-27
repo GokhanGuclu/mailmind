@@ -116,7 +116,7 @@ export class EmailAnalyzerService {
         },
       });
 
-      // Task'ları kaydet (rrule varsa doğrula)
+      // Task'ları kaydet (rrule varsa doğrula). AI üretimi → PROPOSED.
       for (const t of result.tasks) {
         const taskRrule = this.safeRrule(t.rrule);
         await tx.task.create({
@@ -128,6 +128,7 @@ export class EmailAnalyzerService {
             dueAt: t.dueAt ?? null,
             rrule: taskRrule,
             priority: t.priority,
+            status: 'PROPOSED',
           },
         });
       }
@@ -156,7 +157,10 @@ export class EmailAnalyzerService {
         if (!r.title || (!r.fireAt && !r.rrule)) continue;
 
         let nextFireAt: Date | null = r.fireAt ?? null;
-        let status: 'ACTIVE' | 'PAUSED' = 'ACTIVE';
+        // AI üretimi → her zaman PROPOSED (onaylanınca ACTIVE'e geçer; rrule
+        // geçersizse onaylama PAUSED'a düşer). Böylece scheduler PROPOSED'ları
+        // tetiklemez, kullanıcı onayı şart.
+        let status: 'PROPOSED' | 'PAUSED' = 'PROPOSED';
         let validatedRrule: string | null = null;
 
         if (r.rrule) {

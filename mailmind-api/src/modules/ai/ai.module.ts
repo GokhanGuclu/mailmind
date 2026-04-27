@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { AiAnalysisController } from './presentation/ai-analysis.controller';
 import { AiComposeController } from './presentation/ai-compose.controller';
+import { AiProposalsController } from './presentation/ai-proposals.controller';
+import { AiProposalsService } from './application/ai-proposals.service';
 import { EmailAnalyzerService } from './application/email-analyzer.service';
 import { AiWorkerService } from './application/ai-worker.service';
 import { AiComposeService } from './application/ai-compose.service';
@@ -13,7 +15,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [NotificationsModule],
-  controllers: [AiAnalysisController, AiComposeController],
+  controllers: [AiAnalysisController, AiComposeController, AiProposalsController],
   providers: [
     // Port → Implementation bağlantısı
     { provide: AI_PROVIDER_TOKEN, useClass: OllamaProvider },
@@ -23,6 +25,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     AiAnalysisRepository,
     RecurrenceDetectorService,
     ReminderSchedulerService,
+    AiProposalsService,
   ],
   exports: [EmailAnalyzerService, RecurrenceDetectorService],
 })

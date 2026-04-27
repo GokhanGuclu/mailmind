@@ -214,6 +214,7 @@ model AiAnalysis {
 }
 
 enum TaskStatus {
+  PROPOSED      // AI önerdi, kullanıcı onayı bekliyor
   PENDING
   IN_PROGRESS
   DONE
@@ -279,6 +280,7 @@ model CalendarEvent {
 }
 
 enum ReminderStatus {
+  PROPOSED      // AI önerdi, kullanıcı onayı bekliyor
   ACTIVE
   PAUSED
   COMPLETED

@@ -1,0 +1,133 @@
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service';
+
+export type ProposalKind = 'task' | 'calendar-event' | 'reminder';
+
+/**
+ * AI'ın ürettiği `*.status = 'PROPOSED'` kayıtları için human-in-the-loop akışı.
+ *
+ * Onaylama transition'ları:
+ * - Task          PROPOSED → PENDING
+ * - CalendarEvent PROPOSED → PENDING (ileride Google Calendar push'tan sonra CONFIRMED)
+ * - Reminder      PROPOSED → ACTIVE  (scheduler artık tetikler)
+ *
+ * Reddetme: hepsi → CANCELLED.
+ */
+@Injectable()
+export class AiProposalsService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async list(userId: string) {
+    const [tasks, calendarEvents, reminders] = await Promise.all([
+      this.prisma.task.findMany({
+        where: { userId, status: 'PROPOSED' },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.calendarEvent.findMany({
+        where: { userId, status: 'PROPOSED' },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.reminder.findMany({
+        where: { userId, status: 'PROPOSED' },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+    return { tasks, calendarEvents, reminders };
+  }
+
+  async count(userId: string) {
+    const [tasks, calendarEvents, reminders] = await Promise.all([
+      this.prisma.task.count({ where: { userId, status: 'PROPOSED' } }),
+      this.prisma.calendarEvent.count({ where: { userId, status: 'PROPOSED' } }),
+      this.prisma.reminder.count({ where: { userId, status: 'PROPOSED' } }),
+    ]);
+    return {
+      tasks,
+      calendarEvents,
+      reminders,
+      total: tasks + calendarEvents + reminders,
+    };
+  }
+
+  async approve(userId: string, kind: ProposalKind, id: string) {
+    switch (kind) {
+      case 'task':
+        return this.transitionTask(userId, id, 'PROPOSED', 'PENDING');
+      case 'calendar-event':
+        return this.transitionCalendarEvent(userId, id, 'PROPOSED', 'PENDING');
+      case 'reminder':
+        return this.transitionReminder(userId, id, 'PROPOSED', 'ACTIVE');
+      default:
+        throw new BadRequestException(`Unknown proposal kind: ${kind}`);
+    }
+  }
+
+  async reject(userId: string, kind: ProposalKind, id: string) {
+    switch (kind) {
+      case 'task':
+        return this.transitionTask(userId, id, 'PROPOSED', 'CANCELLED');
+      case 'calendar-event':
+        return this.transitionCalendarEvent(userId, id, 'PROPOSED', 'CANCELLED');
+      case 'reminder':
+        return this.transitionReminder(userId, id, 'PROPOSED', 'CANCELLED');
+      default:
+        throw new BadRequestException(`Unknown proposal kind: ${kind}`);
+    }
+  }
+
+  // ─── Transitions ────────────────────────────────────────────────────────
+
+  private async transitionTask(
+    userId: string,
+    id: string,
+    from: 'PROPOSED',
+    to: 'PENDING' | 'CANCELLED',
+  ) {
+    const updated = await this.prisma.task.updateMany({
+      where: { id, userId, status: from },
+      data: { status: to },
+    });
+    if (updated.count === 0) {
+      throw new NotFoundException(
+        `Task ${id} not found or not in PROPOSED state`,
+      );
+    }
+    return this.prisma.task.findUniqueOrThrow({ where: { id } });
+  }
+
+  private async transitionCalendarEvent(
+    userId: string,
+    id: string,
+    from: 'PROPOSED',
+    to: 'PENDING' | 'CANCELLED',
+  ) {
+    const updated = await this.prisma.calendarEvent.updateMany({
+      where: { id, userId, status: from },
+      data: { status: to },
+    });
+    if (updated.count === 0) {
+      throw new NotFoundException(
+        `CalendarEvent ${id} not found or not in PROPOSED state`,
+      );
+    }
+    return this.prisma.calendarEvent.findUniqueOrThrow({ where: { id } });
+  }
+
+  private async transitionReminder(
+    userId: string,
+    id: string,
+    from: 'PROPOSED',
+    to: 'ACTIVE' | 'CANCELLED',
+  ) {
+    const updated = await this.prisma.reminder.updateMany({
+      where: { id, userId, status: from },
+      data: { status: to },
+    });
+    if (updated.count === 0) {
+      throw new NotFoundException(
+        `Reminder ${id} not found or not in PROPOSED state`,
+      );
+    }
+    return this.prisma.reminder.findUniqueOrThrow({ where: { id } });
+  }
+}
