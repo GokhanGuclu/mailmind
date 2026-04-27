@@ -66,6 +66,9 @@ KURALLAR:
    - Tekrarlı bir calendarEvent (rrule'lu) ürettiysen, aynı şeyi reminders'a EKLEME.
    - Bir toplantı + ön hazırlık iki AYRI iş ise: calendarEvent (toplantı) + task (hazırlık) ayrı yazılır.
 6. Belirsiz tarihlerde ("yakında", "bir ara") fireAt/dueAt VERME — TASK olarak çıkar veya hiç çıkarma.
+   AMA: göreceli ama AÇIK ifadeler ("Cuma", "yarın", "5 Mayıs", "ay sonu",
+   "haftaya Pazartesi") tarihtir — bunlar için DAİMA dueAt/fireAt çöz ve doldur.
+   Saat belirtilmemişse: deadline için 17:00, etkinlik için 09:00 kullan.
 7. tasks/calendarEvents/reminders alanlarından her biri için aksiyon yoksa BOŞ DİZİ döndür.
 8. Pazarlama / bülten / otomatik bildirim mailleri için tüm dizileri BOŞ döndür.
 9. summary: HER ZAMAN Türkçe yaz, e-postanın dilinden bağımsız.
@@ -109,6 +112,16 @@ KURALLAR:
   "calendarEvents": [
     { "title": "Haftalık standup", "startAt": "<ilk Pazartesi 09:00 ISO>", "endAt": "<+30dk>", "location": null, "attendees": [], "rrule": "FREQ=WEEKLY;BYDAY=MO" }
   ],
+  "reminders": []
+}
+
+Örnek D — "Q2 raporunu Cuma mesai bitimine kadar gönder" (göreceli + saatsiz deadline):
+{
+  "summary": "Q2 raporu Cuma mesai bitimine kadar yöneticiye gönderilecek.",
+  "tasks": [
+    { "title": "Q2 raporunu yöneticiye gönder", "notes": "Cuma mesai bitimi", "dueAt": "<bir sonraki Cuma 17:00 ISO>", "rrule": null, "priority": "MEDIUM" }
+  ],
+  "calendarEvents": [],
   "reminders": []
 }`;
 
