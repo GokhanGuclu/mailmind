@@ -39,6 +39,19 @@ describe('RecurrenceDetectorService', () => {
       expect(svc.validate('FREQ=NOPE', FIXED_NOW).ok).toBe(false);
     });
 
+    it('rejects 3-letter BYDAY tokens (RFC 5545 = 2-letter only)', () => {
+      // rrule.js silently accepts these but they break Google Calendar; we reject.
+      expect(svc.validate('FREQ=WEEKLY;BYDAY=FRI', FIXED_NOW).ok).toBe(false);
+      expect(svc.validate('FREQ=WEEKLY;BYDAY=MON,WED', FIXED_NOW).ok).toBe(false);
+      expect(svc.validate('FREQ=WEEKLY;BYDAY=FRIDAY', FIXED_NOW).ok).toBe(false);
+    });
+
+    it('accepts 2-letter BYDAY with optional ordinal prefix', () => {
+      expect(svc.validate('FREQ=WEEKLY;BYDAY=MO,FR', FIXED_NOW).ok).toBe(true);
+      expect(svc.validate('FREQ=MONTHLY;BYDAY=1FR', FIXED_NOW).ok).toBe(true);
+      expect(svc.validate('FREQ=MONTHLY;BYDAY=-1MO', FIXED_NOW).ok).toBe(true);
+    });
+
     it('rejects rule that has no future occurrences (UNTIL in the past)', () => {
       const v = svc.validate('FREQ=DAILY;UNTIL=20200101T000000Z', FIXED_NOW);
       expect(v.ok).toBe(false);

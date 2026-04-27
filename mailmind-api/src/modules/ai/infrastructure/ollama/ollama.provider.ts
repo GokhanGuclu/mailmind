@@ -46,12 +46,14 @@ YALNIZCA aşağıdaki formatta geçerli bir JSON nesnesiyle yanıt ver (markdown
 KURALLAR:
 1. Tarihleri DAİMA kullanıcının saat dilimine göre yorumla. Çıktı ISO 8601 olmalı (offset belirt).
 2. "yarın", "Pazartesi", "ay sonu" gibi göreceli ifadeleri verilen "Şu anki zaman"a göre çöz.
-3. TEKRARLAYAN ifadeler için RFC 5545 RRULE üret:
+3. TEKRARLAYAN ifadeler için RFC 5545 RRULE üret. BYDAY DAİMA 2-letter
+   token'larıyla yazılır: MO, TU, WE, TH, FR, SA, SU. (FRI/MON/FRIDAY YANLIŞ.)
    - "her gün" / "her sabah" / "her akşam"  → "FREQ=DAILY"
    - "her hafta sonu"                       → "FREQ=WEEKLY;BYDAY=SA,SU"
    - "her Pazartesi"                        → "FREQ=WEEKLY;BYDAY=MO"
+   - "her Cuma" / "every Friday"            → "FREQ=WEEKLY;BYDAY=FR"
    - "ayın ilk Cuması"                      → "FREQ=MONTHLY;BYDAY=1FR"
-   - "iki haftada bir"                      → "FREQ=WEEKLY;INTERVAL=2"
+   - "iki haftada bir Cuma" / "every other Friday" → "FREQ=WEEKLY;INTERVAL=2;BYDAY=FR"
    - "yılda bir"                            → "FREQ=YEARLY"
 4. Aksiyon türü seçimi (TEK BİR yere yaz, ASLA birden fazla yere değil):
    - Net tarih/saatli olay (toplantı, randevu, uçuş, görüşme) → calendarEvents

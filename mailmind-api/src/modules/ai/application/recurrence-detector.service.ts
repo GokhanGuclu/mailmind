@@ -24,6 +24,23 @@ export class RecurrenceDetectorService {
 
     const cleaned = raw.trim().replace(/^RRULE:/i, '');
 
+    // Defense-in-depth: rrule.js BYDAY 3-letter token'ları (MON/FRI/FRIDAY) sessizce
+    // kabul ediyor ama RFC 5545 sadece 2-letter (MO/TU/WE/TH/FR/SA/SU) kabul eder.
+    // Yanlış token DB'ye yazılırsa Google Calendar push'ta patlar; burada kesiyoruz.
+    const bydayMatch = /BYDAY=([^;]+)/i.exec(cleaned);
+    if (bydayMatch) {
+      const bad = bydayMatch[1]
+        .split(',')
+        .map((t) => t.trim())
+        .filter((t) => !/^[+-]?\d{0,2}(MO|TU|WE|TH|FR|SA|SU)$/i.test(t));
+      if (bad.length > 0) {
+        return {
+          ok: false,
+          error: `BYDAY contains non-RFC5545 tokens: ${bad.join(',')}. Use 2-letter codes (MO/TU/WE/TH/FR/SA/SU).`,
+        };
+      }
+    }
+
     let rule: RRule;
     try {
       rule = RRule.fromString(`DTSTART:${this.toIcalUtc(dtstart)}\nRRULE:${cleaned}`);
