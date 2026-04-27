@@ -56,10 +56,20 @@ export class EmailAnalyzerService {
 
     if (!analysis) return;
 
-    // Sadece INBOX analiz et
-    if (analysis.message.folder !== 'INBOX') {
-      await this.markSkipped(analysisId);
-      return;
+    // INBOX → kullanıcıya gelen, perspektif "incoming" (kim ne istiyor / ne planlıyor).
+    // SENT  → kullanıcının yazdığı, perspektif "outgoing" (kullanıcı ne söz veriyor / planlıyor).
+    // Diğer klasörler (TRASH/SPAM) atlanır.
+    let direction: 'incoming' | 'outgoing';
+    switch (analysis.message.folder) {
+      case 'INBOX':
+        direction = 'incoming';
+        break;
+      case 'SENT':
+        direction = 'outgoing';
+        break;
+      default:
+        await this.markSkipped(analysisId);
+        return;
     }
 
     const userTimezone = analysis.user?.timezone ?? 'Europe/Istanbul';
@@ -72,6 +82,7 @@ export class EmailAnalyzerService {
       ),
       userTimezone,
       nowIso: new Date().toISOString(),
+      direction,
     };
 
     try {

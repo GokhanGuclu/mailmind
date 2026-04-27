@@ -76,16 +76,29 @@ export class OutboxWorkerService implements OnModuleInit {
             throw new Error('MESSAGE_SYNCED: missing userId or messageIds');
           }
 
-          // Her yeni mesaj için AiAnalysis kaydı aç (PENDING)
-          await this.prisma.$transaction(
-            messageIds.map((mailboxMessageId) =>
-              this.prisma.aiAnalysis.create({
-                data: { userId, mailboxMessageId, status: 'PENDING' },
-              }),
-            ),
-          );
+          // Sadece INBOX ve SENT klasöründeki mesajları AI analizine sok.
+          // TRASH/SPAM için AiAnalysis kaydı bile açma (DB temiz kalır).
+          const analyzable = await this.prisma.mailboxMessage.findMany({
+            where: {
+              id: { in: messageIds },
+              folder: { in: ['INBOX', 'SENT'] },
+            },
+            select: { id: true },
+          });
 
-          this.logger.log(`Created ${messageIds.length} AiAnalysis records for userId=${userId}`);
+          if (analyzable.length > 0) {
+            await this.prisma.$transaction(
+              analyzable.map(({ id: mailboxMessageId }) =>
+                this.prisma.aiAnalysis.create({
+                  data: { userId, mailboxMessageId, status: 'PENDING' },
+                }),
+              ),
+            );
+          }
+
+          this.logger.log(
+            `Created ${analyzable.length}/${messageIds.length} AiAnalysis records for userId=${userId} (skipped TRASH/SPAM)`,
+          );
           break;
         }
 

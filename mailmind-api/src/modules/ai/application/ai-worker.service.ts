@@ -32,11 +32,12 @@ export class AiWorkerService implements OnModuleInit {
   }
 
   async processOnce(): Promise<void> {
-    // INBOX mesajına ait, en eski PENDING AiAnalysis kaydını al
+    // INBOX veya SENT klasöründeki mesaja ait, en eski PENDING AiAnalysis kaydını al.
+    // SENT genişlemesi: kullanıcının kendi söz verdiği şeyleri (giden mailde) yakalamak için.
     const analysis = await this.prisma.aiAnalysis.findFirst({
       where: {
         status: 'PENDING',
-        message: { folder: 'INBOX' },
+        message: { folder: { in: ['INBOX', 'SENT'] } },
       },
       orderBy: { createdAt: 'asc' },
       select: { id: true },

@@ -11,6 +11,14 @@ export type EmailContent = {
 
   /** "Şu anki zaman" — LLM'in "yarın", "Pazartesi" gibi ifadeleri çözmesi için */
   nowIso: string;
+
+  /**
+   * Mailin yönü:
+   * - "incoming" → INBOX, kullanıcıya gelen mail (üçüncü kişi söz/plan/davet ediyor).
+   * - "outgoing" → SENT,  kullanıcının yazdığı mail (kullanıcı söz/plan veriyor).
+   * Prompt'taki perspektif kuralı bu alana göre değişir.
+   */
+  direction: 'incoming' | 'outgoing';
 };
 
 export interface AiProviderPort {

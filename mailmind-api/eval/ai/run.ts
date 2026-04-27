@@ -29,6 +29,7 @@ async function main() {
       bodyText: fixture.input.bodyText,
       userTimezone: fixture.input.userTimezone,
       nowIso: fixture.input.nowIso,
+      direction: (fixture.input as any).direction ?? 'incoming',
     };
 
     const t0 = Date.now();

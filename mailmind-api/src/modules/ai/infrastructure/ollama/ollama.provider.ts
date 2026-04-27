@@ -68,6 +68,13 @@ KURALLAR:
 8. Pazarlama / bülten / otomatik bildirim mailleri için tüm dizileri BOŞ döndür.
 9. summary: HER ZAMAN Türkçe yaz, e-postanın dilinden bağımsız.
 10. SADECE JSON nesnesiyle yanıt ver. Önce veya sonra ekstra metin olmadan.
+11. PERSPEKTİF — "Mail yönü" alanına dikkat et:
+    - "incoming"  → Mail kullanıcıya GELDİ. Karşı taraf bir şey istiyor / planlıyor /
+                    davet ediyor. Aksiyon kullanıcının yapacağı şey olabilir.
+    - "outgoing"  → Mail kullanıcı tarafından GÖNDERİLDİ. Kullanıcı kendisi söz
+                    veriyor / plan yapıyor. Çıkardığın aksiyonlar kullanıcının
+                    KENDİ taahhütleridir; "yarın size dosyayı göndereceğim" gibi
+                    bir cümle, kullanıcı için bir TASK üretir.
 
 ÖRNEKLER (kuralları pekiştirmek için):
 
@@ -147,6 +154,10 @@ export class OllamaProvider implements AiProviderPort {
     return [
       `Kullanıcı saat dilimi: ${content.userTimezone}`,
       `Şu anki zaman (UTC): ${content.nowIso}`,
+      `Mail yönü: ${content.direction}` +
+        (content.direction === 'outgoing'
+          ? '  (kullanıcı tarafından gönderildi — perspektif: kullanıcı söz veriyor)'
+          : '  (kullanıcıya geldi — perspektif: karşı taraf istiyor/planlıyor)'),
       ``,
       `--- E-posta ---`,
       `Date: ${content.date.toISOString()}`,
