@@ -85,10 +85,12 @@ export class ReminderSchedulerService implements OnModuleInit, OnModuleDestroy {
     if (due.length === 0) return 0;
 
     let fired = 0;
+    let raced = 0;
     for (const r of due) {
       try {
-        await this.fireOne(r, now);
-        fired++;
+        const won = await this.fireOne(r, now);
+        if (won) fired++;
+        else raced++;
       } catch (err: any) {
         this.logger.error(
           `Failed to fire reminder id=${r.id}: ${err?.message ?? String(err)}`,
@@ -97,14 +99,31 @@ export class ReminderSchedulerService implements OnModuleInit, OnModuleDestroy {
       }
     }
 
-    if (fired > 0) {
-      this.logger.log(`Fired ${fired}/${due.length} reminders.`);
+    if (fired > 0 || raced > 0) {
+      this.logger.log(
+        `Fired ${fired}/${due.length} reminders` +
+          (raced > 0 ? ` (${raced} skipped — already claimed by another worker)` : ''),
+      );
     }
     return fired;
   }
 
   // ---------------------------------------------------------------------------
 
+  /**
+   * Atomic claim ile tek bir reminder'ı ateşler.
+   *
+   * Race koşulu: aynı reminder iki scheduler worker tarafından aynı anda
+   * fetch edilebilir → ikisi de fire eder → çift Notification.
+   *
+   * Çözüm: updateMany'i `where: { id, nextFireAt: <fetch'tekiyle aynı> }`
+   * guard'ı ile yap. Sadece nextFireAt'ı ilerleten ilk worker `count=1`
+   * alır; diğerleri `count=0` görüp sessizce çekilir. Notification.create
+   * aynı transaction içinde olduğu için kaybeden taraf hiçbir kayıt
+   * bırakmaz (atomik all-or-nothing).
+   *
+   * Dönüş: true = bu worker fire'ı kazandı; false = race kaybedildi.
+   */
   private async fireOne(
     reminder: {
       id: string;
@@ -115,11 +134,7 @@ export class ReminderSchedulerService implements OnModuleInit, OnModuleDestroy {
       nextFireAt: Date | null;
     },
     now: Date,
-  ): Promise<void> {
-    this.logger.log(
-      `[REMINDER FIRED] id=${reminder.id} user=${reminder.userId} title="${reminder.title}" recurring=${!!reminder.rrule}`,
-    );
-
+  ): Promise<boolean> {
     let nextFireAt: Date | null = null;
     let status: 'ACTIVE' | 'COMPLETED' = 'COMPLETED';
 
@@ -129,12 +144,22 @@ export class ReminderSchedulerService implements OnModuleInit, OnModuleDestroy {
       status = nextFireAt ? 'ACTIVE' : 'COMPLETED';
     }
 
-    // Notification + reminder güncelleme tek transaction'da; iki kayıt ya da hiç.
-    await this.prisma.$transaction(async (tx) => {
-      await tx.reminder.update({
-        where: { id: reminder.id },
+    return this.prisma.$transaction(async (tx) => {
+      // Atomic claim: yalnızca nextFireAt hâlâ aynıysa güncelle.
+      // Başka bir worker zaten ilerlettiyse count=0 → çekil.
+      const claim = await tx.reminder.updateMany({
+        where: {
+          id: reminder.id,
+          status: 'ACTIVE',
+          nextFireAt: reminder.nextFireAt,
+        },
         data: { lastFiredAt: now, nextFireAt, status },
       });
+
+      if (claim.count !== 1) {
+        // Yarış kaybedildi — tx rollback (notification yaratılmaz).
+        return false;
+      }
 
       await tx.notification.create({
         data: {
@@ -148,6 +173,11 @@ export class ReminderSchedulerService implements OnModuleInit, OnModuleDestroy {
           sourceId: reminder.id,
         },
       });
+
+      this.logger.log(
+        `[REMINDER FIRED] id=${reminder.id} user=${reminder.userId} title="${reminder.title}" recurring=${!!reminder.rrule}`,
+      );
+      return true;
     });
   }
 }

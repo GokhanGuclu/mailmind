@@ -3,28 +3,28 @@ import { RecurrenceDetectorService } from './recurrence-detector.service';
 
 describe('ReminderSchedulerService.tick()', () => {
   let reminderFindMany: jest.Mock;
-  let reminderUpdate: jest.Mock;
+  let reminderUpdateMany: jest.Mock;
   let notificationCreate: jest.Mock;
   let svc: ReminderSchedulerService;
 
   beforeEach(() => {
     reminderFindMany = jest.fn();
-    reminderUpdate = jest.fn().mockResolvedValue({});
+    // Default: claim succeeds (count=1). Tests can override per-call.
+    reminderUpdateMany = jest.fn().mockResolvedValue({ count: 1 });
     notificationCreate = jest.fn().mockResolvedValue({});
 
-    // $transaction(callback) pattern: pass tx with the same shape
+    // $transaction(callback) pattern. tx exposes the same updateMany/create.
     const prisma = {
-      reminder: { findMany: reminderFindMany, update: reminderUpdate },
+      reminder: { findMany: reminderFindMany, updateMany: reminderUpdateMany },
       $transaction: jest.fn(async (cb: any) =>
         cb({
-          reminder: { update: reminderUpdate },
+          reminder: { updateMany: reminderUpdateMany },
           notification: { create: notificationCreate },
         }),
       ),
     } as any;
 
     const recurrence = new RecurrenceDetectorService();
-    // No-op notifications service — tick() uses prisma.notification.create directly inside tx
     const notifications = { create: jest.fn() } as any;
 
     svc = new ReminderSchedulerService(prisma, recurrence, notifications);
@@ -34,31 +34,33 @@ describe('ReminderSchedulerService.tick()', () => {
     reminderFindMany.mockResolvedValue([]);
     const fired = await svc.tick(new Date('2026-04-25T10:00:00Z'));
     expect(fired).toBe(0);
-    expect(reminderUpdate).not.toHaveBeenCalled();
+    expect(reminderUpdateMany).not.toHaveBeenCalled();
     expect(notificationCreate).not.toHaveBeenCalled();
   });
 
-  it('one-shot reminder: fires once, transitions to COMPLETED, no nextFireAt', async () => {
+  it('one-shot reminder: claim succeeds → COMPLETED, no nextFireAt, notification created', async () => {
     const now = new Date('2026-04-25T10:00:00Z');
+    const dueAt = new Date('2026-04-25T09:00:00Z');
     reminderFindMany.mockResolvedValue([
       {
         id: 'r1',
         userId: 'u1',
         title: 'Doctor appointment',
         rrule: null,
-        fireAt: new Date('2026-04-25T09:00:00Z'),
-        nextFireAt: new Date('2026-04-25T09:00:00Z'),
+        fireAt: dueAt,
+        nextFireAt: dueAt,
       },
     ]);
 
     const fired = await svc.tick(now);
 
     expect(fired).toBe(1);
-    const update = reminderUpdate.mock.calls[0][0];
-    expect(update.where).toEqual({ id: 'r1' });
-    expect(update.data.lastFiredAt).toBe(now);
-    expect(update.data.nextFireAt).toBeNull();
-    expect(update.data.status).toBe('COMPLETED');
+    const claim = reminderUpdateMany.mock.calls[0][0];
+    // Atomic claim: where guards on (id, status=ACTIVE, nextFireAt unchanged)
+    expect(claim.where).toEqual({ id: 'r1', status: 'ACTIVE', nextFireAt: dueAt });
+    expect(claim.data.lastFiredAt).toBe(now);
+    expect(claim.data.nextFireAt).toBeNull();
+    expect(claim.data.status).toBe('COMPLETED');
 
     const notif = notificationCreate.mock.calls[0][0].data;
     expect(notif.type).toBe('REMINDER_FIRED');
@@ -83,15 +85,54 @@ describe('ReminderSchedulerService.tick()', () => {
 
     await svc.tick(now);
 
-    const update = reminderUpdate.mock.calls[0][0].data;
-    expect(update.status).toBe('ACTIVE');
-    expect(update.nextFireAt).toBeInstanceOf(Date);
-    expect((update.nextFireAt as Date).getTime()).toBeGreaterThan(dueAt.getTime());
+    const claim = reminderUpdateMany.mock.calls[0][0];
+    expect(claim.where.nextFireAt).toBe(dueAt); // race guard
+    expect(claim.data.status).toBe('ACTIVE');
+    expect(claim.data.nextFireAt).toBeInstanceOf(Date);
+    expect((claim.data.nextFireAt as Date).getTime()).toBeGreaterThan(dueAt.getTime());
 
     const notif = notificationCreate.mock.calls[0][0].data;
-    // Tekrarlayan body sıradaki occurrence'ı içerir
     expect(notif.body).toContain('Tekrarlayan');
     expect(notif.body).toContain('Sıradaki');
+  });
+
+  it('race lost (claim count=0): no notification created, fired count not incremented', async () => {
+    const now = new Date('2026-04-25T10:00:00Z');
+    reminderFindMany.mockResolvedValue([
+      {
+        id: 'rRaced',
+        userId: 'u1',
+        title: 'Already fired',
+        rrule: null,
+        fireAt: now,
+        nextFireAt: now,
+      },
+    ]);
+    // Simulate another worker beat us: updateMany affects 0 rows
+    reminderUpdateMany.mockResolvedValueOnce({ count: 0 });
+
+    const fired = await svc.tick(now);
+
+    expect(fired).toBe(0); // we did NOT win
+    expect(reminderUpdateMany).toHaveBeenCalledTimes(1);
+    expect(notificationCreate).not.toHaveBeenCalled(); // tx returned false before create
+  });
+
+  it('mixed batch: 1 wins claim, 1 loses race → fired=1, exactly 1 notification', async () => {
+    const now = new Date('2026-04-25T10:00:00Z');
+    reminderFindMany.mockResolvedValue([
+      { id: 'rOk', userId: 'u1', title: 'OK', rrule: null, fireAt: now, nextFireAt: now },
+      { id: 'rRaced', userId: 'u1', title: 'Raced', rrule: null, fireAt: now, nextFireAt: now },
+    ]);
+    reminderUpdateMany
+      .mockResolvedValueOnce({ count: 1 }) // first wins
+      .mockResolvedValueOnce({ count: 0 }); // second lost race
+
+    const fired = await svc.tick(now);
+
+    expect(fired).toBe(1);
+    expect(reminderUpdateMany).toHaveBeenCalledTimes(2);
+    expect(notificationCreate).toHaveBeenCalledTimes(1);
   });
 
   it('one tx failure does not block other reminders in the batch', async () => {
@@ -101,20 +142,18 @@ describe('ReminderSchedulerService.tick()', () => {
       { id: 'rBad', userId: 'u1', title: 'Bad', rrule: null, fireAt: now, nextFireAt: now },
     ]);
 
-    // Make $transaction fail for the second call
     let callCount = 0;
     (svc as any).prisma.$transaction = jest.fn(async (cb: any) => {
       callCount++;
       if (callCount === 2) throw new Error('boom');
       return cb({
-        reminder: { update: reminderUpdate },
+        reminder: { updateMany: reminderUpdateMany },
         notification: { create: notificationCreate },
       });
     });
 
     const fired = await svc.tick(now);
 
-    // First fired ok, second threw → batch result is 1
     expect(fired).toBe(1);
   });
 });
