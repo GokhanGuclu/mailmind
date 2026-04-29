@@ -219,7 +219,12 @@ export class EmailAnalyzerService {
 
     const futureCalendarEvents = result.calendarEvents.filter((e) => {
       if (e.rrule) return true; // recurring → gelecekte tekrar edecek
-      if (e.startAt < now) {
+      // All-day etkinlik için karşılaştırma "gün sonu" üzerinden:
+      // 15 Mayıs all-day etkinliği 15 Mayıs 23:59'a kadar geçerli sayılır.
+      const cutoff = e.isAllDay
+        ? new Date(e.startAt.getFullYear(), e.startAt.getMonth(), e.startAt.getDate(), 23, 59, 59, 999)
+        : e.startAt;
+      if (cutoff < now) {
         skipped.calendarEvents++;
         return false;
       }
@@ -276,6 +281,7 @@ export class EmailAnalyzerService {
             title: e.title,
             startAt: e.startAt,
             endAt: e.endAt ?? null,
+            isAllDay: e.isAllDay === true,
             location: e.location ?? null,
             attendees: e.attendees?.length ? JSON.stringify(e.attendees) : null,
             rrule: eventRrule,

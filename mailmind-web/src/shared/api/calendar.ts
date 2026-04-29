@@ -6,8 +6,12 @@ export type ApiCalendarEvent = {
   description: string | null;
   startAt: string;
   endAt: string | null;
+  /** Saat belirsiz (mailden çıkmıyor) → UI 'Tüm gün' göstersin. */
+  isAllDay?: boolean;
   location: string | null;
   attendees: string | null;
+  rrule?: string | null;
+  timezone?: string;
   status: string | null;
   aiAnalysisId: string | null;
   createdAt: string;

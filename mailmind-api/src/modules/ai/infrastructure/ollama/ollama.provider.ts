@@ -28,6 +28,7 @@ YALNIZCA aşağıdaki formatta geçerli bir JSON nesnesiyle yanıt ver (markdown
       "title": "Etkinlik veya toplantı başlığı",
       "startAt": "ISO 8601 tarih dizesi",
       "endAt": "ISO 8601 tarih dizesi veya null",
+      "isAllDay": true | false,
       "location": "Konum dizesi veya null",
       "attendees": ["email@example.com"],
       "rrule": "RFC 5545 RRULE veya null"
@@ -68,7 +69,12 @@ KURALLAR:
 6. Belirsiz tarihlerde ("yakında", "bir ara") fireAt/dueAt VERME — TASK olarak çıkar veya hiç çıkarma.
    AMA: göreceli ama AÇIK ifadeler ("Cuma", "yarın", "5 Mayıs", "ay sonu",
    "haftaya Pazartesi") tarihtir — bunlar için DAİMA dueAt/fireAt çöz ve doldur.
-   Saat belirtilmemişse: deadline için 17:00, etkinlik için 09:00 kullan.
+   Saat varsayımı:
+   - tasks.dueAt için saat belirtilmemişse 17:00 kullan (deadline default).
+   - calendarEvents için saat belirtilmemişse: isAllDay=true VE startAt'ı
+     o günün 00:00'ı olarak yaz. ASLA tahmini saat (09:00 vb.) UYDURMA.
+     Saat açıkça yazılmışsa isAllDay=false ve gerçek saat kullanılır.
+   - reminders.fireAt için saat belirtilmemişse 09:00 kullan (genel).
 7. tasks/calendarEvents/reminders alanlarından her biri için aksiyon yoksa BOŞ DİZİ döndür.
 8. Pazarlama / bülten / otomatik bildirim mailleri için tüm dizileri BOŞ döndür.
 9. summary: HER ZAMAN Türkçe yaz, e-postanın dilinden bağımsız.
@@ -100,7 +106,17 @@ KURALLAR:
     { "title": "XYZ müşteri profil dokümanını incele", "notes": "Görüşme öncesi hazırlık", "dueAt": null, "rrule": null, "priority": "MEDIUM" }
   ],
   "calendarEvents": [
-    { "title": "XYZ Holding ile görüşme", "startAt": "<Çarşamba 11:00 ISO>", "endAt": null, "location": null, "attendees": [], "rrule": null }
+    { "title": "XYZ Holding ile görüşme", "startAt": "<Çarşamba 11:00 ISO>", "endAt": null, "isAllDay": false, "location": null, "attendees": [], "rrule": null }
+  ],
+  "reminders": []
+}
+
+Örnek E — saatsiz etkinlik: "15 Mayıs Cuma günü ofiste şirket pikniği":
+{
+  "summary": "15 Mayıs Cuma günü şirket pikniği planlanmış (saat belirtilmemiş).",
+  "tasks": [],
+  "calendarEvents": [
+    { "title": "Şirket pikniği", "startAt": "2026-05-15T00:00:00+03:00", "endAt": null, "isAllDay": true, "location": "ofis", "attendees": [], "rrule": null }
   ],
   "reminders": []
 }
@@ -233,6 +249,7 @@ export class OllamaProvider implements AiProviderPort {
         title: String(e.title).slice(0, 500),
         startAt: this.safeDate(e.startAt) ?? new Date(),
         endAt: e.endAt ? this.safeDate(e.endAt) : null,
+        isAllDay: e.isAllDay === true, // sadece açık true; eksik/false → false
         location: e.location ? String(e.location) : null,
         attendees: Array.isArray(e.attendees)
           ? e.attendees.map(String).filter(Boolean)

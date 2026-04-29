@@ -10,6 +10,12 @@ export type CalendarEventResult = {
   title: string;
   startAt: Date;
   endAt?: Date | null;
+  /**
+   * Mailde saat belirtilmemişse true. UI "Tüm gün" gösterir, startAt
+   * o günün 00:00'ı olarak yazılır, kullanıcı edit'te saat girince
+   * false'a çevrilir.
+   */
+  isAllDay?: boolean;
   location?: string | null;
   attendees?: string[];
   rrule?: string | null;

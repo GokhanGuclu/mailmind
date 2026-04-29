@@ -272,6 +272,12 @@ model CalendarEvent {
   description    String?
   startAt        DateTime
   endAt          DateTime?
+  /**
+   * Saat belirsiz (mailde sadece tarih var) → all-day etkinlik. startAt
+   * o günün 00:00'ına yazılır; UI saat göstermez, kullanıcı edit ile
+   * saat ekleyince isAllDay=false yapılır.
+   */
+  isAllDay       Boolean             @default(false)
   location       String?
   attendees      String?             // JSON array string: ["a@x.com", "b@x.com"]
   rrule          String?             // RFC 5545 RRULE; tekrarlayan etkinlikler için

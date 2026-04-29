@@ -36,6 +36,19 @@ function formatIso(iso: string | null): string {
   }
 }
 
+function formatDateOnly(iso: string | null): string {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleDateString('tr-TR', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+  } catch {
+    return iso;
+  }
+}
+
 export function MailProposalsPage() {
   const { accessToken } = useAuth();
   const [data, setData] = useState<ProposalsList>(EMPTY);
@@ -173,9 +186,20 @@ export function MailProposalsPage() {
       <h3 className="ai-proposals-card__title">{e.title}</h3>
       {e.description && <p className="ai-proposals-card__notes">{e.description}</p>}
       <dl className="ai-proposals-card__meta">
-        <dt>Başlangıç</dt>
-        <dd>{formatIso(e.startAt)}</dd>
-        {e.endAt && (
+        <dt>Tarih</dt>
+        <dd>
+          {e.isAllDay ? (
+            <>
+              {formatDateOnly(e.startAt)}{' '}
+              <span className="ai-proposals-card__time-hint">
+                · Tüm gün (saat belirsiz)
+              </span>
+            </>
+          ) : (
+            formatIso(e.startAt)
+          )}
+        </dd>
+        {e.endAt && !e.isAllDay && (
           <>
             <dt>Bitiş</dt>
             <dd>{formatIso(e.endAt)}</dd>
