@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   LuBan,
+  LuBell,
   LuCalendar,
   LuFilePen,
   LuInbox,
@@ -32,6 +33,7 @@ function mailNavbarTitle(pathname: string, copy: MailDashboardCopy): string {
   if (pathname.endsWith('/taslaklar')) return copy.navDrafts;
   if (pathname.endsWith('/cop-kutusu')) return copy.navTrash;
   if (pathname.endsWith('/oneriler')) return 'AI Önerileri';
+  if (pathname.endsWith('/animsaticilar')) return 'Anımsatıcılar';
   if (pathname.endsWith('/new')) return copy.navNewMail;
   return copy.navGeneralInbox;
 }
@@ -213,6 +215,15 @@ export function MailLayout() {
                   {proposalsCount.total > 99 ? '99+' : proposalsCount.total}
                 </span>
               )}
+            </NavLink>
+            <NavLink
+              to="/mail/animsaticilar"
+              className={({ isActive }) =>
+                `mail-dash-sidebar__link ${isActive ? 'mail-dash-sidebar__link--active' : ''}`
+              }
+            >
+              <LuBell size={18} aria-hidden />
+              Anımsatıcılar
             </NavLink>
             <NavLink
               to="/mail/spam"
