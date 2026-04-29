@@ -9,6 +9,7 @@ import { AiModule } from './modules/ai/ai.module';
 import { IntegrationsModule } from './modules/integrations/integrations.module';
 import { DraftsModule } from './modules/drafts/drafts.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { RemindersModule } from './modules/reminders/reminders.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     IntegrationsModule,
     DraftsModule,
     NotificationsModule,
+    RemindersModule,
   ],
   controllers: [HealthController],
 })
