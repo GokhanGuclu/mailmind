@@ -206,6 +206,35 @@ export class EmailAnalyzerService {
     result: AnalysisResult,
     userTimezone: string,
   ): Promise<void> {
+    const now = new Date();
+
+    // Geçmiş aksiyonları drop et: AI eski mailleri analiz edebilir, ama o
+    // mailde geçen tarih artık geçmişte ise kullanıcı için anlamsız.
+    // - Calendar event: startAt < now → drop (rrule'lu olanlar muaf;
+    //   tekrarlanan etkinlik gelecekteki occurrence'lar için hâlâ geçerli)
+    // - Task: dueAt set ve dueAt < now → drop (dueAt boş task'lar genel iş)
+    // - Reminder one-shot: fireAt < now → drop
+    // - Reminder recurring: nextFireAt'ı RRULE'dan now sonrası hesapla.
+    const skipped = { tasks: 0, calendarEvents: 0, reminders: 0 };
+
+    const futureCalendarEvents = result.calendarEvents.filter((e) => {
+      if (e.rrule) return true; // recurring → gelecekte tekrar edecek
+      if (e.startAt < now) {
+        skipped.calendarEvents++;
+        return false;
+      }
+      return true;
+    });
+
+    const futureTasks = result.tasks.filter((t) => {
+      if (!t.dueAt) return true; // dueAt yoksa hâlâ geçerli (genel iş)
+      if (t.dueAt < now) {
+        skipped.tasks++;
+        return false;
+      }
+      return true;
+    });
+
     await this.prisma.$transaction(async (tx) => {
       // AiAnalysis güncelle (lockedAt da temizleniyor — başarı yolu)
       await tx.aiAnalysis.update({
@@ -221,7 +250,7 @@ export class EmailAnalyzerService {
       });
 
       // Task'ları kaydet (rrule varsa doğrula). AI üretimi → PROPOSED.
-      for (const t of result.tasks) {
+      for (const t of futureTasks) {
         const taskRrule = this.safeRrule(t.rrule);
         await tx.task.create({
           data: {
@@ -238,7 +267,7 @@ export class EmailAnalyzerService {
       }
 
       // CalendarEvent'leri kaydet (rrule varsa doğrula)
-      for (const e of result.calendarEvents) {
+      for (const e of futureCalendarEvents) {
         const eventRrule = this.safeRrule(e.rrule, e.startAt);
         await tx.calendarEvent.create({
           data: {
@@ -260,6 +289,12 @@ export class EmailAnalyzerService {
       for (const r of result.reminders) {
         if (!r.title || (!r.fireAt && !r.rrule)) continue;
 
+        // Tek seferlik + geçmiş fireAt → drop
+        if (!r.rrule && r.fireAt && r.fireAt < now) {
+          skipped.reminders++;
+          continue;
+        }
+
         let nextFireAt: Date | null = r.fireAt ?? null;
         // AI üretimi → her zaman PROPOSED (onaylanınca ACTIVE'e geçer; rrule
         // geçersizse onaylama PAUSED'a düşer). Böylece scheduler PROPOSED'ları
@@ -268,10 +303,20 @@ export class EmailAnalyzerService {
         let validatedRrule: string | null = null;
 
         if (r.rrule) {
-          const v = this.recurrence.validate(r.rrule, r.fireAt ?? new Date());
+          // Validate: dtstart=fireAt veya now (RRULE'un kendi semantiği için).
+          const v = this.recurrence.validate(r.rrule, r.fireAt ?? now);
           if (v.ok) {
             validatedRrule = r.rrule.replace(/^RRULE:/i, '').trim();
-            nextFireAt = v.nextFireAt;
+            // ÖNEMLİ: nextFireAt scheduler için NOW sonrası hesaplanmalı.
+            // Aksi halde "her gün" kuralı + 5 gün önceki dtstart → 5 gün
+            // önceki bir occurrence kaydedilir, scheduler hemen ateşler.
+            const futureNext = this.recurrence.computeNextFireAt(validatedRrule, now);
+            if (futureNext === null) {
+              // RRULE'un gelecek occurrence'ı yok (örn UNTIL geçmişte) → drop
+              skipped.reminders++;
+              continue;
+            }
+            nextFireAt = futureNext;
           } else {
             this.logger.warn(
               `Invalid rrule from LLM (analysis=${analysisId}): ${v.error}; reminder paused for review`,
@@ -295,6 +340,13 @@ export class EmailAnalyzerService {
         });
       }
     });
+
+    if (skipped.tasks + skipped.calendarEvents + skipped.reminders > 0) {
+      this.logger.log(
+        `Filtered past actions for analysis=${analysisId}: ` +
+          `tasks=${skipped.tasks} events=${skipped.calendarEvents} reminders=${skipped.reminders}`,
+      );
+    }
   }
 
   /**
