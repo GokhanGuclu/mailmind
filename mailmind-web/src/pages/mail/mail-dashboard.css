@@ -3727,3 +3727,311 @@
     display: none;
   }
 }
+
+/* ─── Sidebar nav badge (AI Proposals) ────────────────────────────────── */
+
+.mail-dash-sidebar__link-label {
+  flex: 1;
+}
+
+.mail-dash-sidebar__link-badge {
+  min-width: 20px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--accent) 85%, transparent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+  text-align: center;
+}
+
+/* ─── AI Proposals page ───────────────────────────────────────────────── */
+
+.ai-proposals-page {
+  padding: 24px 28px;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.ai-proposals-page__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.ai-proposals-page__heading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 6px 0;
+}
+
+.ai-proposals-page__lead {
+  font-size: 13.5px;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.5;
+  max-width: 720px;
+}
+
+.ai-proposals-page__refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.ai-proposals-page__refresh:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  color: var(--accent);
+}
+
+.ai-proposals-page__refresh .is-spinning {
+  animation: ai-spin 1s linear infinite;
+}
+
+@keyframes ai-spin {
+  to { transform: rotate(360deg); }
+}
+
+.ai-proposals-page__error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: color-mix(in srgb, #e11d48 12%, var(--surface));
+  border: 1px solid color-mix(in srgb, #e11d48 35%, var(--border));
+  border-radius: 8px;
+  color: #e11d48;
+  font-size: 13px;
+}
+
+.ai-proposals-page__empty {
+  text-align: center;
+  padding: 80px 20px;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-proposals-page__empty p {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ai-proposals-page__empty span {
+  font-size: 13px;
+}
+
+.ai-proposals-page__section + .ai-proposals-page__section {
+  margin-top: 8px;
+}
+
+.ai-proposals-page__section-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 12px 0;
+}
+
+.ai-proposals-page__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--muted) 18%, var(--surface));
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.ai-proposals-page__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 12px;
+}
+
+.ai-proposals-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color 0.15s ease;
+}
+
+.ai-proposals-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 25%, var(--border));
+}
+
+.ai-proposals-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ai-proposals-card__kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ai-proposals-card__kind--task {
+  background: color-mix(in srgb, #2563eb 18%, var(--surface));
+  color: #2563eb;
+}
+
+.ai-proposals-card__kind--event {
+  background: color-mix(in srgb, #7c3aed 18%, var(--surface));
+  color: #7c3aed;
+}
+
+.ai-proposals-card__kind--reminder {
+  background: color-mix(in srgb, #ea580c 18%, var(--surface));
+  color: #ea580c;
+}
+
+.ai-proposals-card__priority {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.ai-proposals-card__priority--high {
+  background: color-mix(in srgb, #e11d48 18%, var(--surface));
+  color: #e11d48;
+}
+
+.ai-proposals-card__priority--medium {
+  background: color-mix(in srgb, #f59e0b 18%, var(--surface));
+  color: #b45309;
+}
+
+.ai-proposals-card__priority--low {
+  background: color-mix(in srgb, var(--muted) 14%, var(--surface));
+  color: var(--muted);
+}
+
+.ai-proposals-card__title {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.ai-proposals-card__notes {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.ai-proposals-card__meta {
+  margin: 0;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 12px;
+  font-size: 12.5px;
+}
+
+.ai-proposals-card__meta dt {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.ai-proposals-card__meta dd {
+  margin: 0;
+  color: var(--text);
+}
+
+.ai-proposals-card__rrule {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 11.5px;
+  color: var(--accent);
+}
+
+.ai-proposals-card__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.ai-proposals-card__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.15s ease, opacity 0.15s ease;
+}
+
+.ai-proposals-card__btn:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.ai-proposals-card__btn--approve {
+  background: var(--accent);
+  color: #fff;
+}
+
+.ai-proposals-card__btn--approve:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+.ai-proposals-card__btn--reject {
+  background: transparent;
+  color: var(--muted);
+  border-color: var(--border);
+}
+
+.ai-proposals-card__btn--reject:hover:not(:disabled) {
+  color: #e11d48;
+  border-color: color-mix(in srgb, #e11d48 50%, var(--border));
+}

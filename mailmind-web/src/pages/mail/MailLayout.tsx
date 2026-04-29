@@ -11,6 +11,7 @@ import {
   LuMailPlus,
   LuSearch,
   LuSend,
+  LuSparkles,
   LuStar,
   LuTrash2,
   LuUserRound,
@@ -19,6 +20,7 @@ import { useUIContext } from '../../shared/context/ui-context';
 import { useAuth } from '../../shared/context/auth-context';
 import { mailDashboardContent, type MailDashboardCopy } from './page.mock-data';
 import { NotificationsBell } from './NotificationsBell';
+import { useProposalsCount } from '../../shared/hooks/useProposalsCount';
 import './mail-dashboard.css';
 
 function mailNavbarTitle(pathname: string, copy: MailDashboardCopy): string {
@@ -29,6 +31,7 @@ function mailNavbarTitle(pathname: string, copy: MailDashboardCopy): string {
   if (pathname.endsWith('/gonderilen')) return copy.navSent;
   if (pathname.endsWith('/taslaklar')) return copy.navDrafts;
   if (pathname.endsWith('/cop-kutusu')) return copy.navTrash;
+  if (pathname.endsWith('/oneriler')) return 'AI Önerileri';
   if (pathname.endsWith('/new')) return copy.navNewMail;
   return copy.navGeneralInbox;
 }
@@ -39,6 +42,7 @@ export function MailLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { count: proposalsCount } = useProposalsCount();
   const navbarTitle = useMemo(() => mailNavbarTitle(location.pathname, copy), [location.pathname, copy]);
 
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -195,6 +199,20 @@ export function MailLayout() {
             >
               <LuCalendar size={18} aria-hidden />
               {copy.navCalendar}
+            </NavLink>
+            <NavLink
+              to="/mail/oneriler"
+              className={({ isActive }) =>
+                `mail-dash-sidebar__link ${isActive ? 'mail-dash-sidebar__link--active' : ''}`
+              }
+            >
+              <LuSparkles size={18} aria-hidden />
+              <span className="mail-dash-sidebar__link-label">AI Önerileri</span>
+              {proposalsCount.total > 0 && (
+                <span className="mail-dash-sidebar__link-badge">
+                  {proposalsCount.total > 99 ? '99+' : proposalsCount.total}
+                </span>
+              )}
             </NavLink>
             <NavLink
               to="/mail/spam"
