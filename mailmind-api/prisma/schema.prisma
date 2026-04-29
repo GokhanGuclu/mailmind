@@ -194,13 +194,21 @@ model AiAnalysis {
   userId           String
   mailboxMessageId String
   status           AiAnalysisStatus @default(PENDING)
-  model            String?         // örn: "qwen2.5:7b-instruct"
+  model            String?         // örn: "llama3.1:8b"
   summary          String?         // AI'ın ürettiği kısa özet
   rawResult        Json?           // AI'dan gelen ham yanıt
   errorMessage     String?
   processedAt      DateTime?
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
+
+  // ── Robustness alanları ─────────────────────────────────────────────────
+  /** Şimdiye kadarki başarısız deneme sayısı (3'e ulaştığında FAILED terminaldir). */
+  attemptCount Int @default(0)
+  /** Sonraki retry'a kadar bekleme zamanı (PENDING + nextRetryAt > now ise worker beklemeli). */
+  nextRetryAt  DateTime?
+  /** PROCESSING durumunda atanır; stuck-job recovery bu alana bakar. */
+  lockedAt     DateTime?
 
   user    IamUser        @relation(fields: [userId], references: [id], onDelete: Cascade)
   message MailboxMessage @relation(fields: [mailboxMessageId], references: [id], onDelete: Cascade)
@@ -211,6 +219,8 @@ model AiAnalysis {
 
   @@index([userId, status])
   @@index([mailboxMessageId])
+  @@index([status, nextRetryAt]) // worker'ın "şimdi işlenebilecek PENDING" sorgusu
+  @@index([status, lockedAt])    // stuck-job recovery sorgusu
 }
 
 enum TaskStatus {

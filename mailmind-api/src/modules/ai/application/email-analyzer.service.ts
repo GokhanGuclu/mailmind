@@ -8,6 +8,11 @@ import { RecurrenceDetectorService } from './recurrence-detector.service';
 
 const BODY_MAX_CHARS = 2000;
 
+/** Toplam denemenin üst sınırı (ilk + 2 retry = 3). */
+export const MAX_ATTEMPTS = 3;
+/** attemptCount=N başarısız olduğunda kullanılan beklemeler. */
+const BACKOFF_MS: readonly number[] = [30_000, 120_000, 600_000]; // 30sn → 2dk → 10dk
+
 @Injectable()
 export class EmailAnalyzerService {
   private readonly logger = new Logger(EmailAnalyzerService.name);
@@ -27,10 +32,11 @@ export class EmailAnalyzerService {
    * 4. AiAnalysis güncelle
    */
   async process(analysisId: string): Promise<void> {
-    // Atomic claim: PENDING → PROCESSING
+    // Atomic claim: PENDING → PROCESSING + lockedAt damgası.
+    // Bu damga stuck-job recovery'nin "5 dakikadır PROCESSING'de takılı" tespiti için.
     const claimed = await this.prisma.aiAnalysis.updateMany({
       where: { id: analysisId, status: 'PENDING' },
-      data: { status: 'PROCESSING' },
+      data: { status: 'PROCESSING', lockedAt: new Date() },
     });
     if (claimed.count !== 1) return; // başka worker kapmış
 
@@ -97,13 +103,99 @@ export class EmailAnalyzerService {
         ? `Parse error: ${err.raw.slice(0, 200)}`
         : (err?.message ?? String(err));
 
+      await this.handleFailure(analysisId, errorMessage);
+    }
+  }
+
+  /**
+   * Stuck-job recovery: 5 dakikadan uzun süre PROCESSING'de kalmış kayıtları
+   * tekrar PENDING'e çek (worker crash'leri için). attemptCount artırılır
+   * ki sonsuz döngüye girmesin.
+   */
+  async recoverStuck(now: Date = new Date(), staleMs = 5 * 60_000): Promise<number> {
+    const threshold = new Date(now.getTime() - staleMs);
+    const stuck = await this.prisma.aiAnalysis.findMany({
+      where: { status: 'PROCESSING', lockedAt: { lt: threshold } },
+      select: { id: true, attemptCount: true },
+      take: 50,
+    });
+    if (stuck.length === 0) return 0;
+
+    for (const s of stuck) {
+      const nextAttempt = s.attemptCount + 1;
+      if (nextAttempt >= MAX_ATTEMPTS) {
+        await this.prisma.aiAnalysis.update({
+          where: { id: s.id },
+          data: {
+            status: 'FAILED',
+            errorMessage: 'stuck in PROCESSING; max attempts exceeded',
+            attemptCount: nextAttempt,
+            lockedAt: null,
+          },
+        });
+      } else {
+        await this.prisma.aiAnalysis.update({
+          where: { id: s.id },
+          data: {
+            status: 'PENDING',
+            attemptCount: nextAttempt,
+            nextRetryAt: new Date(now.getTime() + BACKOFF_MS[nextAttempt - 1]),
+            lockedAt: null,
+          },
+        });
+      }
+    }
+    this.logger.warn(`Recovered ${stuck.length} stuck PROCESSING records.`);
+    return stuck.length;
+  }
+
+  /**
+   * Hata sonrası atomik durum geçişi:
+   * - attemptCount < MAX_ATTEMPTS → status PENDING + nextRetryAt = now+backoff(N)
+   * - attemptCount >= MAX_ATTEMPTS → status FAILED (terminal)
+   *
+   * Her iki durumda da lockedAt temizlenir ve errorMessage tutulur.
+   */
+  private async handleFailure(analysisId: string, errorMessage: string): Promise<void> {
+    // Mevcut attemptCount'u al
+    const current = await this.prisma.aiAnalysis.findUnique({
+      where: { id: analysisId },
+      select: { attemptCount: true },
+    });
+    const attemptCount = (current?.attemptCount ?? 0) + 1;
+
+    if (attemptCount >= MAX_ATTEMPTS) {
       await this.prisma.aiAnalysis.update({
         where: { id: analysisId },
-        data: { status: 'FAILED', errorMessage },
+        data: {
+          status: 'FAILED',
+          errorMessage,
+          attemptCount,
+          lockedAt: null,
+        },
       });
-
-      this.logger.error(`Analysis failed id=${analysisId}: ${errorMessage}`);
+      this.logger.error(
+        `Analysis FAILED (terminal) id=${analysisId} attempt=${attemptCount}/${MAX_ATTEMPTS}: ${errorMessage}`,
+      );
+      return;
     }
+
+    const backoffMs = BACKOFF_MS[attemptCount - 1] ?? BACKOFF_MS[BACKOFF_MS.length - 1];
+    const nextRetryAt = new Date(Date.now() + backoffMs);
+
+    await this.prisma.aiAnalysis.update({
+      where: { id: analysisId },
+      data: {
+        status: 'PENDING',
+        errorMessage,
+        attemptCount,
+        nextRetryAt,
+        lockedAt: null,
+      },
+    });
+    this.logger.warn(
+      `Analysis retry scheduled id=${analysisId} attempt=${attemptCount}/${MAX_ATTEMPTS} nextRetryAt=${nextRetryAt.toISOString()}: ${errorMessage}`,
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -115,7 +207,7 @@ export class EmailAnalyzerService {
     userTimezone: string,
   ): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
-      // AiAnalysis güncelle
+      // AiAnalysis güncelle (lockedAt da temizleniyor — başarı yolu)
       await tx.aiAnalysis.update({
         where: { id: analysisId },
         data: {
@@ -124,6 +216,7 @@ export class EmailAnalyzerService {
           summary: result.summary,
           rawResult: result as any,
           processedAt: new Date(),
+          lockedAt: null,
         },
       });
 
@@ -221,7 +314,7 @@ export class EmailAnalyzerService {
   private async markSkipped(analysisId: string): Promise<void> {
     await this.prisma.aiAnalysis.update({
       where: { id: analysisId },
-      data: { status: 'DONE', summary: null, processedAt: new Date() },
+      data: { status: 'DONE', summary: null, processedAt: new Date(), lockedAt: null },
     });
   }
 
