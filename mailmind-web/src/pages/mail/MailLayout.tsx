@@ -18,6 +18,7 @@ import {
 import { useUIContext } from '../../shared/context/ui-context';
 import { useAuth } from '../../shared/context/auth-context';
 import { mailDashboardContent, type MailDashboardCopy } from './page.mock-data';
+import { NotificationsBell } from './NotificationsBell';
 import './mail-dashboard.css';
 
 function mailNavbarTitle(pathname: string, copy: MailDashboardCopy): string {
@@ -104,6 +105,7 @@ export function MailLayout() {
           </label>
         </div>
         <div className="mail-dash-navbar__right">
+          <NotificationsBell />
           <div className="mail-dash-navbar__profile-wrap" ref={profileWrapRef}>
             <button
               type="button"
