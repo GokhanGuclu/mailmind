@@ -15,6 +15,7 @@ import { MailComposePage } from '../pages/mail/MailComposePage';
 import { MailProposalsPage } from '../pages/mail/MailProposalsPage';
 import { MailRemindersPage } from '../pages/mail/MailRemindersPage';
 import { MailTasksPage } from '../pages/mail/MailTasksPage';
+import { MailAiStatsPage } from '../pages/mail/MailAiStatsPage';
 import { CookieConsentBanner } from '../shared/components/CookieConsentBanner';
 import { ProtectedRoute } from '../shared/components/ProtectedRoute';
 import { MailboxGuard } from '../shared/components/MailboxGuard';
@@ -56,6 +57,7 @@ export function App() {
           <Route path="oneriler" element={<MailProposalsPage />} />
           <Route path="animsaticilar" element={<MailRemindersPage />} />
           <Route path="gorevler" element={<MailTasksPage />} />
+          <Route path="ai-istatistik" element={<MailAiStatsPage />} />
           <Route path="new" element={<MailComposePage />} />
         </Route>
         <Route path="*" element={<Navigate to="/home" replace />} />

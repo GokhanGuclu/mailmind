@@ -1,0 +1,268 @@
+/* AI İstatistikleri sayfası */
+
+.ai-stats-page {
+  padding: 24px 28px;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.ai-stats-page__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.ai-stats-page__heading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 6px 0;
+}
+
+.ai-stats-page__lead {
+  font-size: 13.5px;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.5;
+  max-width: 640px;
+}
+
+.ai-stats-page__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.ai-stats-page__window-tabs {
+  display: flex;
+  padding: 4px;
+  gap: 2px;
+  background: color-mix(in srgb, var(--muted) 8%, var(--surface));
+  border-radius: 8px;
+}
+
+.ai-stats-page__window-tabs button {
+  padding: 5px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.ai-stats-page__window-tabs button.is-active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.ai-stats-page__refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.ai-stats-page__refresh:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  color: var(--accent);
+}
+
+.ai-stats-page__refresh .is-spinning {
+  animation: ai-spin 1s linear infinite;
+}
+
+.ai-stats-page__error {
+  padding: 10px 14px;
+  background: color-mix(in srgb, #e11d48 12%, var(--surface));
+  border: 1px solid color-mix(in srgb, #e11d48 35%, var(--border));
+  border-radius: 8px;
+  color: #e11d48;
+  font-size: 13px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.ai-stats-page__empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* KPI cards */
+
+.ai-stats-page__kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.ai-stats-kpi {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ai-stats-kpi__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ai-stats-kpi__value {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.1;
+}
+
+.ai-stats-kpi__hint {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.ai-stats-kpi.is-good .ai-stats-kpi__value {
+  color: #059669;
+}
+
+.ai-stats-kpi.is-warn .ai-stats-kpi__value {
+  color: #b45309;
+}
+
+.ai-stats-kpi.is-danger .ai-stats-kpi__value {
+  color: #e11d48;
+}
+
+/* Detail cards */
+
+.ai-stats-page__row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 12px;
+}
+
+.ai-stats-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  padding: 14px 16px;
+}
+
+.ai-stats-card--full {
+  grid-column: 1 / -1;
+}
+
+.ai-stats-card h3 {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 10px 0;
+}
+
+.ai-stats-card dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 14px;
+  font-size: 13px;
+}
+
+.ai-stats-card dt {
+  color: var(--muted);
+}
+
+.ai-stats-card dd {
+  margin: 0;
+  color: var(--text);
+}
+
+.ai-stats-muted {
+  color: var(--muted);
+}
+
+/* Table */
+
+.ai-stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.ai-stats-table th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ai-stats-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+}
+
+.ai-stats-table code {
+  font-size: 11.5px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+.ai-stats-status {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.ai-stats-status--done {
+  background: color-mix(in srgb, #10b981 16%, var(--surface));
+  color: #059669;
+}
+
+.ai-stats-status--failed {
+  background: color-mix(in srgb, #e11d48 16%, var(--surface));
+  color: #e11d48;
+}
+
+.ai-stats-status--pending,
+.ai-stats-status--processing {
+  background: color-mix(in srgb, #f59e0b 16%, var(--surface));
+  color: #b45309;
+}
