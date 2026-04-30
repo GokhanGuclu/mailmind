@@ -4024,6 +4024,21 @@
   font-style: italic;
 }
 
+.ai-proposals-card__warn {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: color-mix(in srgb, #f59e0b 12%, var(--surface));
+  border: 1px solid color-mix(in srgb, #f59e0b 35%, var(--border));
+  color: #b45309;
+}
+
+.ai-proposals-card__warn a {
+  color: #b45309;
+  font-weight: 600;
+  margin-left: 4px;
+}
+
 .ai-proposals-card__actions {
   display: flex;
   gap: 8px;

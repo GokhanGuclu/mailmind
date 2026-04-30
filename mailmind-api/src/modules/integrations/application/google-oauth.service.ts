@@ -25,11 +25,18 @@ const GOOGLE_USERINFO_URL = 'https://openidconnect.googleapis.com/v1/userinfo';
 // Scopes:
 // - openid/email/profile: get user identity
 // - https://mail.google.com/: full IMAP/SMTP via XOAUTH2 (covers read/send)
+// - calendar.events: AI'ın çıkardığı/kullanıcının onayladığı CalendarEvent
+//   kayıtlarını Google Takvim'e push'lamak için (read/write etkinlikler).
+//   Eski hesaplar bu scope'a sahip değil → re-consent gerekir; push worker
+//   403 alırsa zarif şekilde retry'ı durdurur.
+export const GOOGLE_CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
+
 const GOOGLE_SCOPES = [
   'openid',
   'email',
   'profile',
   'https://mail.google.com/',
+  GOOGLE_CALENDAR_SCOPE,
 ];
 
 const STATE_TTL_SECONDS = 10 * 60; // 10 minutes
@@ -126,5 +133,34 @@ export class GoogleOAuthService {
     }
 
     return (await res.json()) as GoogleUserInfo;
+  }
+
+  /**
+   * Refresh access token using a stored refresh_token.
+   * Google response contains new access_token + expires_in (no new refresh
+   * token unless rotation enabled).
+   */
+  async refreshAccessToken(refreshToken: string): Promise<GoogleTokenResponse> {
+    const body = new URLSearchParams({
+      client_id: this.clientId,
+      client_secret: this.clientSecret,
+      refresh_token: refreshToken,
+      grant_type: 'refresh_token',
+    });
+
+    const res = await fetch(GOOGLE_TOKEN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new InternalServerErrorException(
+        `Google token refresh failed: ${res.status} ${text}`,
+      );
+    }
+
+    return (await res.json()) as GoogleTokenResponse;
   }
 }

@@ -185,6 +185,12 @@ export function MailProposalsPage() {
       </header>
       <h3 className="ai-proposals-card__title">{e.title}</h3>
       {e.description && <p className="ai-proposals-card__notes">{e.description}</p>}
+      {e.syncErrorMessage && e.syncErrorMessage.toLowerCase().includes('re-consent') && (
+        <div className="ai-proposals-card__warn">
+          ⚠ Google Takvim'e push için yeniden bağlantı gerekli.
+          <a href="/connect-email"> Yeniden bağlan</a>
+        </div>
+      )}
       <dl className="ai-proposals-card__meta">
         <dt>Tarih</dt>
         <dd>

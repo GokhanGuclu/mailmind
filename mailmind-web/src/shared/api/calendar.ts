@@ -14,6 +14,13 @@ export type ApiCalendarEvent = {
   timezone?: string;
   status: string | null;
   aiAnalysisId: string | null;
+  /** 'google_calendar' veya null. */
+  externalSystem?: string | null;
+  /** Push edildiyse Google event id. */
+  externalId?: string | null;
+  /** Push hatası (örn re-consent gerekli). UI uyarı banner'ı için. */
+  syncErrorMessage?: string | null;
+  syncAttemptCount?: number;
   createdAt: string;
   updatedAt: string;
 };

@@ -317,6 +317,15 @@ model CalendarEvent {
   externalSystem String?             // örn "google_calendar"
   externalId     String?             // örn Google Calendar event id
   status         CalendarEventStatus @default(PROPOSED)
+
+  // ── Push (Google Calendar sync) telemetry & retry ───────────────────────
+  /** Sync girişiminde başarısız sayısı. */
+  syncAttemptCount Int       @default(0)
+  /** Worker bir sonraki retry'a kadar beklesin. */
+  syncNextRetryAt  DateTime?
+  /** Son sync hatası — UI debug için. */
+  syncErrorMessage String?
+
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
 
@@ -325,6 +334,8 @@ model CalendarEvent {
 
   @@index([userId, startAt])
   @@index([userId, status])
+  /** push worker'ın "PENDING + externalId yok + retry vakti" sorgusu. */
+  @@index([status, syncNextRetryAt])
 }
 
 enum ReminderStatus {
