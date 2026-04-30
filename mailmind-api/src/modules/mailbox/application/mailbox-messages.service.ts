@@ -57,6 +57,7 @@ export class MailboxMessagesService {
       take: limit + 1, // bir fazla al → nextCursor var mı kontrol et
       select: {
         id: true,
+        mailboxAccountId: true,
         providerMessageId: true,
         folder: true,
         from: true,
@@ -260,6 +261,7 @@ export class MailboxMessagesService {
       take: limit + 1,
       select: {
         id: true,
+        mailboxAccountId: true,
         providerMessageId: true,
         folder: true,
         from: true,
