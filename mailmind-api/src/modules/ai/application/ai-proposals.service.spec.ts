@@ -66,6 +66,61 @@ describe('AiProposalsService', () => {
     });
   });
 
+  describe('byMessage()', () => {
+    it('groups PROPOSED items per mailboxMessage id and sums per kind', async () => {
+      // m1: 1 task + 1 reminder; m2: 2 calendar events; m3: 1 task only
+      task.findMany.mockResolvedValue([
+        { aiAnalysis: { mailboxMessageId: 'm1' } },
+        { aiAnalysis: { mailboxMessageId: 'm3' } },
+      ]);
+      calendarEvent.findMany.mockResolvedValue([
+        { aiAnalysis: { mailboxMessageId: 'm2' } },
+        { aiAnalysis: { mailboxMessageId: 'm2' } },
+      ]);
+      reminder.findMany.mockResolvedValue([
+        { aiAnalysis: { mailboxMessageId: 'm1' } },
+      ]);
+
+      const out = await svc.byMessage('u1');
+
+      expect(out).toEqual({
+        m1: { tasks: 1, calendarEvents: 0, reminders: 1, total: 2 },
+        m2: { tasks: 0, calendarEvents: 2, reminders: 0, total: 2 },
+        m3: { tasks: 1, calendarEvents: 0, reminders: 0, total: 1 },
+      });
+      // PROPOSED + aiAnalysisId not null filter on every query
+      for (const tbl of [task, calendarEvent, reminder]) {
+        const where = tbl.findMany.mock.calls[0][0].where;
+        expect(where.userId).toBe('u1');
+        expect(where.status).toBe('PROPOSED');
+        expect(where.aiAnalysisId).toEqual({ not: null });
+      }
+    });
+
+    it('returns empty object when no PROPOSED rows', async () => {
+      task.findMany.mockResolvedValue([]);
+      calendarEvent.findMany.mockResolvedValue([]);
+      reminder.findMany.mockResolvedValue([]);
+
+      const out = await svc.byMessage('u1');
+      expect(out).toEqual({});
+    });
+
+    it('skips rows with null aiAnalysis (defensive)', async () => {
+      task.findMany.mockResolvedValue([
+        { aiAnalysis: null },
+        { aiAnalysis: { mailboxMessageId: 'm1' } },
+      ]);
+      calendarEvent.findMany.mockResolvedValue([]);
+      reminder.findMany.mockResolvedValue([]);
+
+      const out = await svc.byMessage('u1');
+      expect(out).toEqual({
+        m1: { tasks: 1, calendarEvents: 0, reminders: 0, total: 1 },
+      });
+    });
+  });
+
   describe('approve()', () => {
     it('transitions task PROPOSED → PENDING', async () => {
       task.updateMany.mockResolvedValue({ count: 1 });

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
   LuArchive,
   LuBan,
@@ -9,6 +10,7 @@ import {
   LuEllipsisVertical,
   LuMailOpen,
   LuRefreshCw,
+  LuSparkles,
   LuStar,
   LuTrash2,
   LuX,
@@ -17,6 +19,7 @@ import {
 import { useUIContext } from '../../shared/context/ui-context';
 import { useAuth } from '../../shared/context/auth-context';
 import { messagesApi, type ApiMessage } from '../../shared/api/messages';
+import { useProposalsByMessage } from '../../shared/hooks/useProposalsByMessage';
 import { InboxAttachmentChips } from './InboxAttachmentChips';
 import { mailDashboardContent } from './page.mock-data';
 import { formatMailPageRange } from './format-mail-page-range';
@@ -90,6 +93,7 @@ export function MailInboxPage() {
     [mailboxAccounts],
   );
 
+  const { byMessage: aiByMessage } = useProposalsByMessage();
   const [messages, setMessages] = useState<ApiMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -565,6 +569,25 @@ export function MailInboxPage() {
                             HTML5
                           </span>
                         ) : null}
+                        {(() => {
+                          const ai = aiByMessage[msg.id];
+                          if (!ai || ai.total === 0) return null;
+                          const parts: string[] = [];
+                          if (ai.calendarEvents > 0) parts.push(`${ai.calendarEvents} etkinlik`);
+                          if (ai.tasks > 0) parts.push(`${ai.tasks} görev`);
+                          if (ai.reminders > 0) parts.push(`${ai.reminders} anımsatıcı`);
+                          const tooltip = `AI önerisi: ${parts.join(' · ')} — incelemek için tıkla`;
+                          return (
+                            <Link
+                              to="/mail/oneriler"
+                              className="mail-inbox-list__ai-badge"
+                              title={tooltip}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <LuSparkles size={11} aria-hidden /> {ai.total}
+                            </Link>
+                          );
+                        })()}
                       </span>
                       <span className="mail-inbox-list__dash" aria-hidden>
                         {' '}

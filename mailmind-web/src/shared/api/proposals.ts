@@ -48,6 +48,15 @@ export type ProposalsCount = {
   total: number;
 };
 
+/**
+ * mailboxMessage id → PROPOSED öneri sayıları haritası.
+ * Inbox kart rozeti için kullanılır.
+ */
+export type ProposalsByMessage = Record<
+  string,
+  { tasks: number; calendarEvents: number; reminders: number; total: number }
+>;
+
 export const proposalsApi = {
   list(accessToken: string) {
     return apiRequest<ProposalsList>('/ai/proposals', {
@@ -58,6 +67,13 @@ export const proposalsApi = {
 
   count(accessToken: string) {
     return apiRequest<ProposalsCount>('/ai/proposals/count', {
+      method: 'GET',
+      token: accessToken,
+    });
+  },
+
+  byMessage(accessToken: string) {
+    return apiRequest<ProposalsByMessage>('/ai/proposals/by-message', {
       method: 'GET',
       token: accessToken,
     });

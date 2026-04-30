@@ -49,6 +49,67 @@ export class AiProposalsService {
     };
   }
 
+  /**
+   * mailboxMessage id → PROPOSED öneri sayıları haritası.
+   * Inbox kart rozeti için kullanılır: `byMessage[mail.id]?.total > 0`.
+   * AI üretimi olmayan (`aiAnalysisId IS NULL`) öneriler dışarıda tutulur —
+   * onlar manuel "henüz onaylanmamış" değil, AI flow'una ait değil.
+   */
+  async byMessage(
+    userId: string,
+  ): Promise<
+    Record<
+      string,
+      { tasks: number; calendarEvents: number; reminders: number; total: number }
+    >
+  > {
+    const [tasks, events, reminders] = await Promise.all([
+      this.prisma.task.findMany({
+        where: { userId, status: 'PROPOSED', aiAnalysisId: { not: null } },
+        select: { aiAnalysis: { select: { mailboxMessageId: true } } },
+      }),
+      this.prisma.calendarEvent.findMany({
+        where: { userId, status: 'PROPOSED', aiAnalysisId: { not: null } },
+        select: { aiAnalysis: { select: { mailboxMessageId: true } } },
+      }),
+      this.prisma.reminder.findMany({
+        where: { userId, status: 'PROPOSED', aiAnalysisId: { not: null } },
+        select: { aiAnalysis: { select: { mailboxMessageId: true } } },
+      }),
+    ]);
+
+    type Bucket = { tasks: number; calendarEvents: number; reminders: number; total: number };
+    const map: Record<string, Bucket> = {};
+    const ensure = (mid: string): Bucket => {
+      if (!map[mid]) map[mid] = { tasks: 0, calendarEvents: 0, reminders: 0, total: 0 };
+      return map[mid];
+    };
+
+    for (const t of tasks) {
+      const mid = t.aiAnalysis?.mailboxMessageId;
+      if (!mid) continue;
+      const b = ensure(mid);
+      b.tasks++;
+      b.total++;
+    }
+    for (const e of events) {
+      const mid = e.aiAnalysis?.mailboxMessageId;
+      if (!mid) continue;
+      const b = ensure(mid);
+      b.calendarEvents++;
+      b.total++;
+    }
+    for (const r of reminders) {
+      const mid = r.aiAnalysis?.mailboxMessageId;
+      if (!mid) continue;
+      const b = ensure(mid);
+      b.reminders++;
+      b.total++;
+    }
+
+    return map;
+  }
+
   async approve(userId: string, kind: ProposalKind, id: string) {
     switch (kind) {
       case 'task':
