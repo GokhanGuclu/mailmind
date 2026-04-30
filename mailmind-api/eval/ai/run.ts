@@ -37,7 +37,8 @@ async function main() {
     let failures: string[] = [];
     let raw: any;
     try {
-      raw = await provider.analyzeEmail(content);
+      const out = await provider.analyzeEmail(content);
+      raw = out.result;
       failures = evaluate(fixture, raw);
     } catch (e: any) {
       parseOk = !(e instanceof AiResponseParseError);

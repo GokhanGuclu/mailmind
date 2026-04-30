@@ -1,5 +1,18 @@
 import { AnalysisResult } from '../../domain/value-objects/analysis-result.vo';
 
+/**
+ * Provider çağrısının sonucu + telemetry. Provider implementasyonları çağrı
+ * süresini ölçer ve mümkünse token sayılarını yanıt metadata'sından doldurur
+ * (Ollama OpenAI-uyumlu mod chat completion `usage` objesi döner). Token
+ * yoksa null kalır — DB nullable.
+ */
+export type AnalyzeEmailResult = {
+  result: AnalysisResult;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  latencyMs: number;
+};
+
 export type EmailContent = {
   subject: string;
   from: string;
@@ -22,7 +35,7 @@ export type EmailContent = {
 };
 
 export interface AiProviderPort {
-  analyzeEmail(content: EmailContent): Promise<AnalysisResult>;
+  analyzeEmail(content: EmailContent): Promise<AnalyzeEmailResult>;
   readonly modelName: string;
 }
 

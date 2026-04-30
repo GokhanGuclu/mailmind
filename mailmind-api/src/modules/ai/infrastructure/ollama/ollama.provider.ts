@@ -1,6 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import OpenAI from 'openai';
-import { AiProviderPort, EmailContent } from '../../application/ports/ai-provider.port';
+import {
+  AiProviderPort,
+  AnalyzeEmailResult,
+  EmailContent,
+} from '../../application/ports/ai-provider.port';
 import {
   AnalysisResult,
   TaskResult,
@@ -157,10 +161,13 @@ export class OllamaProvider implements AiProviderPort {
     this.modelName = process.env.OLLAMA_MODEL ?? 'llama3.1:8b';
   }
 
-  async analyzeEmail(content: EmailContent): Promise<AnalysisResult> {
+  async analyzeEmail(content: EmailContent): Promise<AnalyzeEmailResult> {
     const userMessage = this.buildUserMessage(content);
+    const startedAt = Date.now();
 
     let raw: string;
+    let inputTokens: number | null = null;
+    let outputTokens: number | null = null;
     try {
       const response = await this.client.chat.completions.create({
         model: this.modelName,
@@ -172,11 +179,21 @@ export class OllamaProvider implements AiProviderPort {
         response_format: { type: 'json_object' },
       });
       raw = response.choices[0]?.message?.content ?? '';
+
+      // Ollama OpenAI-uyumlu modda usage objesi döner; bazı küçük client
+      // versiyonlarında eksik olabiliyor — defensive okuma.
+      const usage = response.usage as
+        | { prompt_tokens?: number; completion_tokens?: number }
+        | undefined;
+      inputTokens = usage?.prompt_tokens ?? null;
+      outputTokens = usage?.completion_tokens ?? null;
     } catch (err: any) {
       throw new AiProviderError(`Ollama request failed: ${err?.message}`, err);
     }
 
-    return this.parseResponse(raw);
+    const latencyMs = Date.now() - startedAt;
+    const result = this.parseResponse(raw);
+    return { result, inputTokens, outputTokens, latencyMs };
   }
 
   // ---------------------------------------------------------------------------

@@ -234,6 +234,14 @@ model AiAnalysis {
   /** PROCESSING durumunda atanır; stuck-job recovery bu alana bakar. */
   lockedAt     DateTime?
 
+  // ── Telemetry (cost/latency tracking) ───────────────────────────────────
+  /** LLM'in input olarak gördüğü token sayısı (mevcut Ollama API'sinden çekilebiliyor). */
+  inputTokens  Int?
+  /** LLM'in çıktı olarak ürettiği token sayısı. */
+  outputTokens Int?
+  /** Toplam çağrı süresi (ms). */
+  latencyMs    Int?
+
   user    IamUser        @relation(fields: [userId], references: [id], onDelete: Cascade)
   message MailboxMessage @relation(fields: [mailboxMessageId], references: [id], onDelete: Cascade)
 

@@ -92,11 +92,27 @@ export class EmailAnalyzerService {
     };
 
     try {
-      const result = await this.aiProvider.analyzeEmail(content);
-      await this.persist(analysis.id, analysis.userId, result, userTimezone);
+      const providerOut = await this.aiProvider.analyzeEmail(content);
+      await this.persist(
+        analysis.id,
+        analysis.userId,
+        providerOut.result,
+        userTimezone,
+        {
+          inputTokens: providerOut.inputTokens,
+          outputTokens: providerOut.outputTokens,
+          latencyMs: providerOut.latencyMs,
+        },
+      );
 
+      const result = providerOut.result;
       this.logger.log(
-        `Analysis done id=${analysisId} tasks=${result.tasks.length} events=${result.calendarEvents.length} reminders=${result.reminders.length}`,
+        `Analysis done id=${analysisId} tasks=${result.tasks.length} events=${result.calendarEvents.length} reminders=${result.reminders.length}` +
+          ` (${providerOut.latencyMs}ms` +
+          (providerOut.inputTokens != null
+            ? `, ${providerOut.inputTokens}→${providerOut.outputTokens ?? '?'} tokens`
+            : '') +
+          ')',
       );
     } catch (err: any) {
       const errorMessage = err instanceof AiResponseParseError
@@ -205,6 +221,11 @@ export class EmailAnalyzerService {
     userId: string,
     result: AnalysisResult,
     userTimezone: string,
+    telemetry: {
+      inputTokens: number | null;
+      outputTokens: number | null;
+      latencyMs: number;
+    },
   ): Promise<void> {
     const now = new Date();
 
@@ -251,6 +272,9 @@ export class EmailAnalyzerService {
           rawResult: result as any,
           processedAt: new Date(),
           lockedAt: null,
+          inputTokens: telemetry.inputTokens,
+          outputTokens: telemetry.outputTokens,
+          latencyMs: telemetry.latencyMs,
         },
       });
 

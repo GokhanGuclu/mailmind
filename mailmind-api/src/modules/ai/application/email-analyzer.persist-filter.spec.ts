@@ -80,11 +80,16 @@ describe('EmailAnalyzerService.persist — past-action filter', () => {
 
   function setLlmResult(result: Partial<AnalysisResult>) {
     provider.analyzeEmail.mockResolvedValue({
-      summary: 's',
-      tasks: [],
-      calendarEvents: [],
-      reminders: [],
-      ...result,
+      result: {
+        summary: 's',
+        tasks: [],
+        calendarEvents: [],
+        reminders: [],
+        ...result,
+      },
+      inputTokens: 100,
+      outputTokens: 50,
+      latencyMs: 1234,
     });
   }
 
