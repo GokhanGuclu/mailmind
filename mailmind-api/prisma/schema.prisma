@@ -143,9 +143,22 @@ model OutboxEvent {
   id        String    @id @default(cuid())
   type      String
   payload   Json
-  status    String    @default("PENDING") // PENDING|PROCESSING|SENT|FAILED
+  status    String    @default("PENDING") // PENDING|PROCESSING|DONE|FAILED
   createdAt DateTime  @default(now())
   sentAt    DateTime?
+
+  // ── Robustness alanları (AiAnalysis ile aynı pattern) ──────────────────
+  /** Şimdiye kadarki başarısız deneme sayısı. */
+  attemptCount Int       @default(0)
+  /** Sonraki retry'a kadar bekleme zamanı; PENDING için filter. */
+  nextRetryAt  DateTime?
+  /** PROCESSING durumunda atanır; stuck-job recovery bu alana bakar. */
+  lockedAt     DateTime?
+  /** Son hata mesajı — debug ve UI için. */
+  errorMessage String?
+
+  @@index([status, nextRetryAt]) // worker'ın "şimdi işlenebilecek" sorgusu
+  @@index([status, lockedAt])    // stuck recovery sorgusu
 }
 
 enum MailboxSyncJobType {
@@ -170,6 +183,10 @@ model MailboxSyncJob {
   cursor       String?
   errorMessage String?
 
+  // Robustness alanları (startedAt zaten lockedAt rolünde — RUNNING durumda set olur)
+  attemptCount Int       @default(0)
+  nextRetryAt  DateTime?
+
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   startedAt  DateTime?
@@ -178,6 +195,7 @@ model MailboxSyncJob {
   mailboxAccount MailboxAccount @relation(fields: [mailboxAccountId], references: [id], onDelete: Cascade)
 
   @@index([mailboxAccountId, status])
+  @@index([status, nextRetryAt]) // worker'ın "şimdi işlenebilecek" sorgusu
 }
 
 // ─── AI & Productivity ───────────────────────────────────────────────────────

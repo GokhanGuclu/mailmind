@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../../../../shared/infrastructure/prisma/prisma.service';
 import { ImapProvider, FolderMeta } from '../imap/imap.provider';
+import { MAX_ATTEMPTS, nextRetryDate } from '../../retry-policy';
 
 /**
  * Cursor formatı: JSON string → { [folderPath]: maxUid }
@@ -67,9 +68,13 @@ export class MailboxSyncWorkerService implements OnModuleInit {
     // 2) Süresi dolan hesaplar için incremental job aç
     await this.scheduleOverdueIncrementals();
 
-    // 3) PENDING bir job seç
+    // 3) PENDING bir job seç (nextRetryAt vadesi geldiyse)
+    const now = new Date();
     const job = await this.prisma.mailboxSyncJob.findFirst({
-      where: { status: 'PENDING' },
+      where: {
+        status: 'PENDING',
+        OR: [{ nextRetryAt: null }, { nextRetryAt: { lte: now } }],
+      },
       orderBy: { createdAt: 'asc' },
     });
     if (!job) return;
@@ -87,15 +92,69 @@ export class MailboxSyncWorkerService implements OnModuleInit {
 
       await this.prisma.mailboxSyncJob.update({
         where: { id: job.id },
-        data: { status: 'DONE', finishedAt: new Date(), cursor: JSON.stringify(newCursor) },
+        data: {
+          status: 'DONE',
+          finishedAt: new Date(),
+          cursor: JSON.stringify(newCursor),
+          // Başarı yolu: bir sonraki retry zamanlaması temizlensin
+          nextRetryAt: null,
+          errorMessage: null,
+        },
       });
     } catch (err: any) {
-      await this.prisma.mailboxSyncJob.update({
-        where: { id: job.id },
-        data: { status: 'FAILED', finishedAt: new Date(), errorMessage: String(err?.message ?? err) },
-      });
-      this.logger.error(`Sync job failed id=${job.id}`, err?.stack ?? String(err));
+      const errorMessage = String(err?.message ?? err);
+      await this.handleSyncFailure(job.id, job.attemptCount, errorMessage, err);
     }
+  }
+
+  /**
+   * Sync job hatası sonrası retry/backoff:
+   * - attemptCount < MAX_ATTEMPTS → status PENDING + nextRetryAt = now + backoff
+   * - >= MAX_ATTEMPTS → terminal FAILED (kullanıcı UI'dan / mailbox account'tan
+   *   gerekirse manuel re-enqueue eder).
+   *
+   * Bu pattern olmadan IMAP credentials geçici eksik olduğu durumlarda her
+   * saniye fail eden job log'u dolduruyordu.
+   */
+  private async handleSyncFailure(
+    jobId: string,
+    currentAttemptCount: number,
+    errorMessage: string,
+    err: any,
+  ): Promise<void> {
+    const attemptCount = currentAttemptCount + 1;
+
+    if (attemptCount >= MAX_ATTEMPTS) {
+      await this.prisma.mailboxSyncJob.update({
+        where: { id: jobId },
+        data: {
+          status: 'FAILED',
+          finishedAt: new Date(),
+          attemptCount,
+          errorMessage,
+        },
+      });
+      this.logger.error(
+        `Sync job FAILED (terminal) id=${jobId} attempt=${attemptCount}/${MAX_ATTEMPTS}: ${errorMessage}`,
+        err?.stack,
+      );
+      return;
+    }
+
+    const nextRetryAt = nextRetryDate(attemptCount);
+    await this.prisma.mailboxSyncJob.update({
+      where: { id: jobId },
+      data: {
+        status: 'PENDING',
+        startedAt: null, // RUNNING damgası temizle (recovery query'sinden kurtul)
+        attemptCount,
+        nextRetryAt,
+        errorMessage,
+      },
+    });
+    this.logger.warn(
+      `Sync retry scheduled id=${jobId} attempt=${attemptCount}/${MAX_ATTEMPTS} nextRetryAt=${nextRetryAt.toISOString()}: ${errorMessage}`,
+    );
   }
 
   /**

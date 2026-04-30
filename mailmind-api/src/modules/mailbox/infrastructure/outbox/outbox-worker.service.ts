@@ -1,14 +1,19 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../../../shared/infrastructure/prisma/prisma.service';
 import { MailboxSyncWorkerService } from '../providers/sync/mailbox-sync-worker.service';
+import { MAX_ATTEMPTS, nextRetryDate } from '../retry-policy';
 
-type OutboxEventType = 'MAILBOX_ACCOUNT_CONNECTED' | string;
+type OutboxEventType = 'MAILBOX_ACCOUNT_CONNECTED' | 'MESSAGE_SYNCED' | string;
+
+const STUCK_RECOVERY_EVERY_N_TICKS = 60; // 1sn × 60 = 60sn'de bir recovery
+const STUCK_THRESHOLD_MS = 5 * 60_000;
 
 @Injectable()
-export class OutboxWorkerService implements OnModuleInit {
+export class OutboxWorkerService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(OutboxWorkerService.name);
 
   private interval: NodeJS.Timeout | null = null;
+  private tickCount = 0;
 
   private readonly workersEnabled =
     (process.env.WORKERS_ENABLED ?? 'true').toLowerCase() === 'true';
@@ -18,17 +23,16 @@ export class OutboxWorkerService implements OnModuleInit {
     private readonly mailboxSyncWorker: MailboxSyncWorkerService,
   ) {}
 
-
   onModuleInit() {
     if (!this.workersEnabled) {
-      this.logger.log('Workers disabled (WORKERS_ENABLED=false). Interval not started.');
+      this.logger.log('Outbox worker disabled (WORKERS_ENABLED=false).');
       return;
     }
 
     const intervalMs = Number(process.env.OUTBOX_WORKER_INTERVAL_MS ?? 1_000);
 
     this.interval = setInterval(() => {
-      this.processOnce().catch((err) => {
+      this.tick().catch((err) => {
         this.logger.error('Outbox worker tick failed', err?.stack ?? String(err));
       });
     }, intervalMs);
@@ -36,22 +40,43 @@ export class OutboxWorkerService implements OnModuleInit {
     this.logger.log(`Outbox worker started (interval=${intervalMs}ms).`);
   }
 
+  onModuleDestroy() {
+    this.stop();
+  }
+
+  /**
+   * Tek tur: stuck recovery (her N tick'te bir) + bir PENDING event işle.
+   */
+  async tick(): Promise<void> {
+    this.tickCount++;
+    if (this.tickCount % STUCK_RECOVERY_EVERY_N_TICKS === 0) {
+      await this.recoverStuck().catch((err) => {
+        this.logger.error('Stuck recovery failed', err?.stack ?? String(err));
+      });
+    }
+    await this.processOnce();
+  }
+
   async processOnce(): Promise<void> {
+    const now = new Date();
     const event = await this.prisma.outboxEvent.findFirst({
-      where: { status: 'PENDING' },
+      where: {
+        status: 'PENDING',
+        OR: [{ nextRetryAt: null }, { nextRetryAt: { lte: now } }],
+      },
       orderBy: { createdAt: 'asc' },
     });
 
     if (!event) return;
 
-    // ✅ atomic claim: sadece hala PENDING ise PROCESSING'e geçir
+    // Atomic claim: PENDING → PROCESSING + lockedAt damgası.
     const claimed = await this.prisma.outboxEvent.updateMany({
       where: { id: event.id, status: 'PENDING' },
-      data: { status: 'PROCESSING' },
+      data: { status: 'PROCESSING', lockedAt: new Date() },
     });
 
     if (claimed.count !== 1) {
-      // başka bir worker kapmış
+      // başka bir worker kapmış ya da retry zamanı henüz gelmemiş
       return;
     }
 
@@ -62,22 +87,27 @@ export class OutboxWorkerService implements OnModuleInit {
       switch (type) {
         case 'MAILBOX_ACCOUNT_CONNECTED': {
           const payload: any = event.payload;
-          const mailboxAccountId = payload?.mailboxAccountId ?? payload?.mailboxId ?? payload?.id;
-          if (!mailboxAccountId) throw new Error('MAILBOX_ACCOUNT_CONNECTED: missing mailboxAccountId');
+          const mailboxAccountId =
+            payload?.mailboxAccountId ?? payload?.mailboxId ?? payload?.id;
+          if (!mailboxAccountId) {
+            throw new Error('MAILBOX_ACCOUNT_CONNECTED: missing mailboxAccountId');
+          }
           await this.mailboxSyncWorker.enqueueForMailbox(mailboxAccountId);
           break;
         }
 
         case 'MESSAGE_SYNCED': {
           const payload: any = event.payload;
-          const { userId, messageIds } = payload as { userId: string; messageIds: string[] };
+          const { userId, messageIds } = payload as {
+            userId: string;
+            messageIds: string[];
+          };
 
           if (!userId || !Array.isArray(messageIds) || messageIds.length === 0) {
             throw new Error('MESSAGE_SYNCED: missing userId or messageIds');
           }
 
           // Sadece INBOX ve SENT klasöründeki mesajları AI analizine sok.
-          // TRASH/SPAM için AiAnalysis kaydı bile açma (DB temiz kalır).
           const analyzable = await this.prisma.mailboxMessage.findMany({
             where: {
               id: { in: messageIds },
@@ -106,46 +136,99 @@ export class OutboxWorkerService implements OnModuleInit {
           this.logger.warn(`Unknown outbox event type: ${type}`);
       }
 
+      // Başarı: status DONE + lockedAt temizle.
       await this.prisma.outboxEvent.update({
         where: { id: event.id },
-        data: { status: 'DONE' }, // ✅ finishedAt yok
+        data: { status: 'DONE', sentAt: new Date(), lockedAt: null },
       });
     } catch (err: any) {
-      await this.prisma.outboxEvent.update({
-        where: { id: event.id },
-        data: {
-          status: 'FAILED',
-        },
-      });
-
-      this.logger.error(`Outbox event failed: ${event.id}`, err?.stack ?? String(err));
+      const errorMessage = err?.message ?? String(err);
+      await this.handleFailure(event.id, errorMessage);
     }
   }
 
-  private async enqueueMailboxSync(mailboxAccountId: string): Promise<void> {
-    // Senin MailboxSyncWorkerService API'si farklı olabilir.
-    // Var olan methodları deniyoruz (hızlı ilerlemek için).
-    const anyWorker = this.mailboxSyncWorker as any;
+  /**
+   * Stuck-job recovery: STUCK_THRESHOLD_MS'den uzun süre PROCESSING'de kalmış
+   * event'leri tekrar PENDING'e çek (worker crash'leri için).
+   */
+  async recoverStuck(now: Date = new Date()): Promise<number> {
+    const threshold = new Date(now.getTime() - STUCK_THRESHOLD_MS);
+    const stuck = await this.prisma.outboxEvent.findMany({
+      where: { status: 'PROCESSING', lockedAt: { lt: threshold } },
+      select: { id: true, attemptCount: true },
+      take: 50,
+    });
+    if (stuck.length === 0) return 0;
 
-    if (typeof anyWorker.enqueueForMailbox === 'function') {
-      await anyWorker.enqueueForMailbox(mailboxAccountId);
-      return;
+    for (const s of stuck) {
+      const nextAttempt = s.attemptCount + 1;
+      if (nextAttempt >= MAX_ATTEMPTS) {
+        await this.prisma.outboxEvent.update({
+          where: { id: s.id },
+          data: {
+            status: 'FAILED',
+            errorMessage: 'stuck in PROCESSING; max attempts exceeded',
+            attemptCount: nextAttempt,
+            lockedAt: null,
+          },
+        });
+      } else {
+        await this.prisma.outboxEvent.update({
+          where: { id: s.id },
+          data: {
+            status: 'PENDING',
+            attemptCount: nextAttempt,
+            nextRetryAt: nextRetryDate(nextAttempt, now),
+            lockedAt: null,
+          },
+        });
+      }
     }
-    if (typeof anyWorker.enqueue === 'function') {
-      await anyWorker.enqueue(mailboxAccountId);
-      return;
-    }
-    if (typeof anyWorker.createJobForMailbox === 'function') {
-      await anyWorker.createJobForMailbox(mailboxAccountId);
-      return;
-    }
-    if (typeof anyWorker.createJob === 'function') {
-      await anyWorker.createJob(mailboxAccountId);
+    this.logger.warn(`Recovered ${stuck.length} stuck PROCESSING outbox event(s).`);
+    return stuck.length;
+  }
+
+  /**
+   * Hata sonrası atomik durum geçişi:
+   * - attemptCount < MAX_ATTEMPTS → PENDING + nextRetryAt = now + backoff
+   * - >= MAX_ATTEMPTS → terminal FAILED
+   */
+  private async handleFailure(eventId: string, errorMessage: string): Promise<void> {
+    const current = await this.prisma.outboxEvent.findUnique({
+      where: { id: eventId },
+      select: { attemptCount: true },
+    });
+    const attemptCount = (current?.attemptCount ?? 0) + 1;
+
+    if (attemptCount >= MAX_ATTEMPTS) {
+      await this.prisma.outboxEvent.update({
+        where: { id: eventId },
+        data: {
+          status: 'FAILED',
+          errorMessage,
+          attemptCount,
+          lockedAt: null,
+        },
+      });
+      this.logger.error(
+        `Outbox event FAILED (terminal) id=${eventId} attempt=${attemptCount}/${MAX_ATTEMPTS}: ${errorMessage}`,
+      );
       return;
     }
 
-    throw new Error(
-      'MailboxSyncWorkerService has no enqueue method. Add enqueueForMailbox(mailboxAccountId) or expose an equivalent method.',
+    const nextRetryAt = nextRetryDate(attemptCount);
+    await this.prisma.outboxEvent.update({
+      where: { id: eventId },
+      data: {
+        status: 'PENDING',
+        errorMessage,
+        attemptCount,
+        nextRetryAt,
+        lockedAt: null,
+      },
+    });
+    this.logger.warn(
+      `Outbox retry scheduled id=${eventId} attempt=${attemptCount}/${MAX_ATTEMPTS} nextRetryAt=${nextRetryAt.toISOString()}: ${errorMessage}`,
     );
   }
 
