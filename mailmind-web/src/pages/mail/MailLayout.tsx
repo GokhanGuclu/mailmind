@@ -7,6 +7,7 @@ import {
   LuFilePen,
   LuInbox,
   LuLayoutGrid,
+  LuListTodo,
   LuLogOut,
   LuMail,
   LuMailPlus,
@@ -34,6 +35,7 @@ function mailNavbarTitle(pathname: string, copy: MailDashboardCopy): string {
   if (pathname.endsWith('/cop-kutusu')) return copy.navTrash;
   if (pathname.endsWith('/oneriler')) return 'AI Önerileri';
   if (pathname.endsWith('/animsaticilar')) return 'Anımsatıcılar';
+  if (pathname.endsWith('/gorevler')) return 'Görevler';
   if (pathname.endsWith('/new')) return copy.navNewMail;
   return copy.navGeneralInbox;
 }
@@ -224,6 +226,15 @@ export function MailLayout() {
             >
               <LuBell size={18} aria-hidden />
               Anımsatıcılar
+            </NavLink>
+            <NavLink
+              to="/mail/gorevler"
+              className={({ isActive }) =>
+                `mail-dash-sidebar__link ${isActive ? 'mail-dash-sidebar__link--active' : ''}`
+              }
+            >
+              <LuListTodo size={18} aria-hidden />
+              Görevler
             </NavLink>
             <NavLink
               to="/mail/spam"
