@@ -117,18 +117,30 @@ export class OutboxWorkerService implements OnModuleInit, OnModuleDestroy {
           });
 
           if (analyzable.length > 0) {
-            await this.prisma.$transaction(
-              analyzable.map(({ id: mailboxMessageId }) =>
-                this.prisma.aiAnalysis.create({
-                  data: { userId, mailboxMessageId, status: 'PENDING' },
-                }),
-              ),
+            // createMany + skipDuplicates: aynı outbox event'i iki kere
+            // process edilse de (retry / race) AiAnalysis.mailboxMessageId
+            // unique olduğu için ikinci girişim sessizce atlanır.
+            const result = await this.prisma.aiAnalysis.createMany({
+              data: analyzable.map(({ id: mailboxMessageId }) => ({
+                userId,
+                mailboxMessageId,
+                status: 'PENDING' as const,
+              })),
+              skipDuplicates: true,
+            });
+
+            this.logger.log(
+              `Created ${result.count}/${messageIds.length} AiAnalysis records for userId=${userId}` +
+                (result.count < analyzable.length
+                  ? ` (${analyzable.length - result.count} already existed — idempotent retry)`
+                  : '') +
+                ' (skipped TRASH/SPAM)',
+            );
+          } else {
+            this.logger.log(
+              `No analyzable messages for userId=${userId} (all in TRASH/SPAM or invalid)`,
             );
           }
-
-          this.logger.log(
-            `Created ${analyzable.length}/${messageIds.length} AiAnalysis records for userId=${userId} (skipped TRASH/SPAM)`,
-          );
           break;
         }
 

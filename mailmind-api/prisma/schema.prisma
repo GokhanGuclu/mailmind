@@ -210,7 +210,13 @@ enum AiAnalysisStatus {
 model AiAnalysis {
   id               String          @id @default(cuid())
   userId           String
-  mailboxMessageId String
+  /**
+   * Bir mail için tek bir analiz kaydı. Aynı MESSAGE_SYNCED outbox event'i
+   * iki kere işlenirse (retry, race) ikinci create unique violation alır;
+   * outbox handler `createMany({ skipDuplicates: true })` ile zarif şekilde
+   * yutar. Re-analiz istenirse mevcut kaydı silmek/güncellemek gerekir.
+   */
+  mailboxMessageId String          @unique
   status           AiAnalysisStatus @default(PENDING)
   model            String?         // örn: "llama3.1:8b"
   summary          String?         // AI'ın ürettiği kısa özet
@@ -236,7 +242,7 @@ model AiAnalysis {
   reminders      Reminder[]
 
   @@index([userId, status])
-  @@index([mailboxMessageId])
+  // mailboxMessageId zaten @unique → ayrıca @@index gereksiz
   @@index([status, nextRetryAt]) // worker'ın "şimdi işlenebilecek PENDING" sorgusu
   @@index([status, lockedAt])    // stuck-job recovery sorgusu
 }
