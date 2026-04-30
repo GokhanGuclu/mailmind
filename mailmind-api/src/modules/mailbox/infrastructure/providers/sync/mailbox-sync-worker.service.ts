@@ -317,12 +317,20 @@ export class MailboxSyncWorkerService implements OnModuleInit {
 
   /**
    * Tüm ACTIVE mailbox hesaplarını tarar.
-   * Son DONE job'ı COOLDOWN_MS'den daha eski olan ve aktif job'u olmayan
-   * hesaplar için yeni bir INCREMENTAL job açar.
+   *
+   * Son terminal job'a göre cooldown uygular:
+   * - Son DONE → normal cooldown (30sn): yeni INCREMENTAL aç.
+   * - Son FAILED → uzun cooldown (1 saat): credentials kaybolmuş hesaplar
+   *   her saniye yeni FAILED job yaratıp log spam etmesin. Kullanıcı
+   *   credentials'ı yeniden bağladığında bir sonraki tick'te devreye girer.
+   * - Hiç job yok → atla (initial sync sadece activate akışında enqueue edilir).
    */
   private async scheduleOverdueIncrementals(): Promise<void> {
-    const cooldownMs = Number(process.env.MAILBOX_SYNC_COOLDOWN_MS ?? 30_000);
-    const threshold = new Date(Date.now() - cooldownMs);
+    const okCooldownMs = Number(process.env.MAILBOX_SYNC_COOLDOWN_MS ?? 30_000);
+    const failedCooldownMs = Number(
+      process.env.MAILBOX_SYNC_FAILED_COOLDOWN_MS ?? 60 * 60_000, // 1 saat
+    );
+    const now = Date.now();
 
     const accounts = await this.prisma.mailboxAccount.findMany({
       where: { status: 'ACTIVE' },
@@ -337,25 +345,47 @@ export class MailboxSyncWorkerService implements OnModuleInit {
       });
       if (hasPending) continue;
 
-      // Son DONE job'ı bul
-      const lastDone = await this.prisma.mailboxSyncJob.findFirst({
-        where: { mailboxAccountId: account.id, status: 'DONE' },
+      // Son terminal job (DONE veya FAILED, en yenisi)
+      const lastTerminal = await this.prisma.mailboxSyncJob.findFirst({
+        where: {
+          mailboxAccountId: account.id,
+          status: { in: ['DONE', 'FAILED'] },
+        },
         orderBy: { finishedAt: 'desc' },
-        select: { finishedAt: true, cursor: true },
+        select: { status: true, finishedAt: true, cursor: true },
       });
 
-      if (!lastDone?.finishedAt) continue;          // hiç sync olmamış
-      if (lastDone.finishedAt > threshold) continue; // henüz cooldown'da
+      if (!lastTerminal?.finishedAt) continue; // hiç tamamlanmış sync yok
+
+      const cooldownMs =
+        lastTerminal.status === 'FAILED' ? failedCooldownMs : okCooldownMs;
+      if (now - lastTerminal.finishedAt.getTime() < cooldownMs) continue;
+
+      // Son cursor'u taşı (DONE'dan; FAILED'dan cursor güvenilmez bırakabiliriz
+      // ama failed mailbox için son DONE cursor'unu da çek).
+      const cursor =
+        lastTerminal.status === 'DONE'
+          ? lastTerminal.cursor
+          : (
+              await this.prisma.mailboxSyncJob.findFirst({
+                where: { mailboxAccountId: account.id, status: 'DONE' },
+                orderBy: { finishedAt: 'desc' },
+                select: { cursor: true },
+              })
+            )?.cursor ?? null;
 
       await this.prisma.mailboxSyncJob.create({
         data: {
           mailboxAccountId: account.id,
           type: 'INCREMENTAL',
           status: 'PENDING',
-          cursor: lastDone.cursor,
+          cursor,
         },
       });
-      this.logger.log(`Scheduled INCREMENTAL sync for mailbox=${account.id}`);
+      this.logger.log(
+        `Scheduled INCREMENTAL sync for mailbox=${account.id}` +
+          (lastTerminal.status === 'FAILED' ? ' (post-failure retry)' : ''),
+      );
     }
   }
 
