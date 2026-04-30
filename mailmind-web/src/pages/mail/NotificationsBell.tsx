@@ -34,6 +34,8 @@ export function NotificationsBell() {
     let cancelled = false;
 
     const tick = async () => {
+      // Sekme arka plandaysa atla (gereksiz network)
+      if (document.visibilityState !== 'visible') return;
       try {
         const res = await notificationsApi.unreadCount(accessToken);
         if (!cancelled) setCount(res.count);
@@ -44,9 +46,15 @@ export function NotificationsBell() {
 
     tick();
     const id = setInterval(tick, POLL_INTERVAL_MS);
+    // Sekmeye dönünce hemen tazele (uzun bir aradan sonra ilk-anda gözüksün)
+    const onVis = () => {
+      if (document.visibilityState === 'visible') tick();
+    };
+    document.addEventListener('visibilitychange', onVis);
     return () => {
       cancelled = true;
       clearInterval(id);
+      document.removeEventListener('visibilitychange', onVis);
     };
   }, [accessToken]);
 
@@ -91,6 +99,16 @@ export function NotificationsBell() {
       return next;
     });
   };
+
+  // Dropdown açıkken liste'yi periyodik tazele — yeni reminder fire'ları
+  // anında görünsün.
+  useEffect(() => {
+    if (!open || !accessToken) return;
+    const id = setInterval(() => {
+      loadList();
+    }, 15_000);
+    return () => clearInterval(id);
+  }, [open, accessToken, loadList]);
 
   const handleMarkRead = async (n: ApiNotification) => {
     if (!accessToken || n.isRead) return;

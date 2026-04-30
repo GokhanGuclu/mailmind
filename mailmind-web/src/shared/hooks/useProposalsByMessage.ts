@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { proposalsApi, type ProposalsByMessage } from '../api/proposals';
 import { useAuth } from '../context/auth-context';
 
-const POLL_INTERVAL_MS = 60_000;
+const POLL_INTERVAL_MS = 30_000;
 
 /**
  * Inbox / message-list rozeti için map'i fetch eder.
@@ -33,6 +33,7 @@ export function useProposalsByMessage(): { byMessage: ProposalsByMessage; refres
     }
     let cancelled = false;
     const tick = async () => {
+      if (document.visibilityState !== 'visible') return;
       try {
         const map = await proposalsApi.byMessage(accessToken);
         if (!cancelled) setByMessage(map);
@@ -42,9 +43,14 @@ export function useProposalsByMessage(): { byMessage: ProposalsByMessage; refres
     };
     tick();
     const id = setInterval(tick, POLL_INTERVAL_MS);
+    const onVis = () => {
+      if (document.visibilityState === 'visible') tick();
+    };
+    document.addEventListener('visibilitychange', onVis);
     return () => {
       cancelled = true;
       clearInterval(id);
+      document.removeEventListener('visibilitychange', onVis);
     };
   }, [accessToken]);
 

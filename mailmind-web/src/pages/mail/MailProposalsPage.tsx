@@ -72,6 +72,19 @@ export function MailProposalsPage() {
 
   useEffect(() => {
     load();
+    // 30sn polling: AI worker yeni öneri ürettiğinde sayfa yenilemeden görünsün.
+    const id = setInterval(() => {
+      load();
+    }, 30_000);
+    // Tab arka plandaysa yeni request gönderme; öne dönünce hemen tazele.
+    const onVis = () => {
+      if (document.visibilityState === 'visible') load();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVis);
+    };
   }, [load]);
 
   const total = data.tasks.length + data.calendarEvents.length + data.reminders.length;

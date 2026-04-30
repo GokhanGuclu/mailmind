@@ -76,6 +76,17 @@ export function MailTasksPage() {
 
   useEffect(() => {
     load();
+    const id = setInterval(() => {
+      load();
+    }, 30_000);
+    const onVis = () => {
+      if (document.visibilityState === 'visible') load();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVis);
+    };
   }, [load]);
 
   const setStatus = async (t: ApiTask, status: ApiTask['status']) => {

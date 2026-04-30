@@ -33,6 +33,7 @@ export function useProposalsCount(): { count: ProposalsCount; refresh: () => Pro
     }
     let cancelled = false;
     const tick = async () => {
+      if (document.visibilityState !== 'visible') return;
       try {
         const c = await proposalsApi.count(accessToken);
         if (!cancelled) setCount(c);
@@ -42,9 +43,14 @@ export function useProposalsCount(): { count: ProposalsCount; refresh: () => Pro
     };
     tick();
     const id = setInterval(tick, POLL_INTERVAL_MS);
+    const onVis = () => {
+      if (document.visibilityState === 'visible') tick();
+    };
+    document.addEventListener('visibilitychange', onVis);
     return () => {
       cancelled = true;
       clearInterval(id);
+      document.removeEventListener('visibilitychange', onVis);
     };
   }, [accessToken]);
 
