@@ -521,16 +521,45 @@ export function MailCalendarFullView({ copy }: Props) {
                     {dayEntries.map((ev) => {
                       const c = entryColor(ev.type, ev.color);
                       const isEditing = editingId === ev.id;
+                      const status = ev.status ?? 'PENDING';
+                      const classes = [
+                        'mail-cal-full__event-row',
+                        `mail-cal-full__event-row--${ev.type}`,
+                        `mail-cal-full__event-row--status-${status.toLowerCase()}`,
+                        ev.isAllDay ? 'mail-cal-full__event-row--all-day' : '',
+                        ev.fromAi ? 'mail-cal-full__event-row--ai' : '',
+                        isEditing ? 'mail-cal-full__event-row--editing' : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ');
                       return (
                       <li
                         key={ev.id}
-                        className={`mail-cal-full__event-row mail-cal-full__event-row--${ev.type} ${isEditing ? 'mail-cal-full__event-row--editing' : ''}`}
+                        className={classes}
                         style={{ ['--entry-color' as string]: c }}
+                        title={
+                          status === 'PROPOSED'
+                            ? 'AI önerisi — onayınız bekleniyor'
+                            : status === 'CONFIRMED'
+                              ? 'Senkron'
+                              : undefined
+                        }
                       >
                         <span className="mail-cal-full__event-type-dot" aria-hidden style={{ background: c }} />
-                        <span className="mail-cal-full__event-time-badge">{ev.time}</span>
+                        <span className="mail-cal-full__event-time-badge">
+                          {ev.isAllDay ? 'Tüm gün' : ev.time}
+                        </span>
                         <div className="mail-cal-full__event-body">
-                          <span className="mail-cal-full__event-title">{ev.title}</span>
+                          <span className="mail-cal-full__event-title">
+                            {ev.fromAi && (
+                              <LuSparkles
+                                size={11}
+                                aria-hidden
+                                className="mail-cal-full__event-ai-icon"
+                              />
+                            )}
+                            {ev.title}
+                          </span>
                           {ev.note ? (
                             <p className="mail-cal-full__event-note">{ev.note}</p>
                           ) : null}

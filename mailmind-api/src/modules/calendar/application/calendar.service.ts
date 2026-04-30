@@ -8,8 +8,10 @@ export class CalendarService {
   constructor(private readonly prisma: PrismaService) {}
 
   async list(userId: string) {
+    // CANCELLED takvimde gösterilmez. PROPOSED dahil — frontend renkli
+    // ayırt eder; kullanıcı /mail/oneriler'den de yönetebilir.
     return this.prisma.calendarEvent.findMany({
-      where: { userId },
+      where: { userId, status: { not: 'CANCELLED' } },
       orderBy: { startAt: 'asc' },
       select: {
         id: true,
@@ -17,8 +19,11 @@ export class CalendarService {
         description: true,
         startAt: true,
         endAt: true,
+        isAllDay: true,
         location: true,
         attendees: true,
+        rrule: true,
+        timezone: true,
         status: true,
         aiAnalysisId: true,
         createdAt: true,
@@ -35,6 +40,8 @@ export class CalendarService {
   }
 
   async create(userId: string, dto: CreateCalendarEventDto) {
+    // Manuel kullanıcı oluşturması = zaten onaylı → PENDING.
+    // Schema default'u PROPOSED — o AI yolu için. Burada explicit override şart.
     return this.prisma.calendarEvent.create({
       data: {
         userId,
@@ -44,6 +51,7 @@ export class CalendarService {
         endAt: dto.endAt ? new Date(dto.endAt) : null,
         location: dto.location ?? null,
         attendees: dto.attendees ? JSON.stringify(dto.attendees) : null,
+        status: 'PENDING',
       },
     });
   }

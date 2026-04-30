@@ -2,6 +2,7 @@ import { useUIContext } from '../../shared/context/ui-context';
 import { MailCalendarFullView } from './mail-calendar-full';
 import { mailDashboardContent } from './page.mock-data';
 import './mail-calendar-full.css';
+import './mail-calendar-status.css';
 
 export function MailCalendarPage() {
   const { language } = useUIContext();

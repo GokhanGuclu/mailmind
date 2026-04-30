@@ -5,6 +5,8 @@ import { useAuth } from '../../../shared/context/auth-context';
 
 export type CalendarEntryType = 'event' | 'task';
 
+export type CalendarEntryStatus = 'PROPOSED' | 'PENDING' | 'CONFIRMED';
+
 export type UserCalendarEntry = {
   id: string;
   y: number;
@@ -15,6 +17,12 @@ export type UserCalendarEntry = {
   type: CalendarEntryType;
   color?: string;
   note?: string;
+  /** API'den gelen status (CANCELLED store seviyesinde filtrelenir, gelmez). */
+  status?: CalendarEntryStatus;
+  /** Saat belirsiz; UI 'Tüm gün' göstersin. */
+  isAllDay?: boolean;
+  /** AI üretimi mi (sparkle ikonu / ayrı stil için). */
+  fromAi?: boolean;
 };
 
 export const CALENDAR_COLOR_PRESETS: Array<{ value: string; label: string }> = [
@@ -60,6 +68,11 @@ function twoDigit(n: number): string {
 function apiToEntry(ev: ApiCalendarEvent): UserCalendarEntry {
   const dt = new Date(ev.startAt);
   const { type, color, note } = parseMeta(ev.description);
+  // Status normalleştirme: backend 'CANCELLED' burada listelenmez (filtre);
+  // ancak güvenlik için fallback PENDING.
+  const rawStatus = (ev.status ?? 'PENDING') as string;
+  const status: CalendarEntryStatus =
+    rawStatus === 'PROPOSED' || rawStatus === 'CONFIRMED' ? rawStatus : 'PENDING';
   return {
     id: ev.id,
     y: dt.getFullYear(),
@@ -70,6 +83,9 @@ function apiToEntry(ev: ApiCalendarEvent): UserCalendarEntry {
     type,
     color,
     note,
+    status,
+    isAllDay: ev.isAllDay === true,
+    fromAi: !!ev.aiAnalysisId,
   };
 }
 

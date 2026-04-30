@@ -1,0 +1,86 @@
+/* ─── Calendar event status — AI-aware visuals ──────────────────────────
+ * PROPOSED: AI önerisi, kullanıcı onayı bekliyor → dashed kenar, amber ton.
+ *           /mail/oneriler'den approve/reject edilebilir.
+ * PENDING:  Onaylı (manuel veya AI sonrası), Google'a senkronlanmadı → solid.
+ * CONFIRMED: Dış sistemde de var (Google Calendar) → check ikonu, yeşilimsi.
+ * AI-üretimi (fromAi=true): sparkle ikonu başlıkta.
+ * All-day: zaman badge'i 'Tüm gün' yazar; UI tarafında ayrıca band stilini
+ *          aşağıda veriyoruz.
+ * ----------------------------------------------------------------------- */
+
+/* Mail calendar full — list rows on day panel */
+
+.mail-cal-full__event-row--status-proposed {
+  border-left: 3px dashed #f59e0b;
+  background: color-mix(in srgb, #f59e0b 6%, var(--surface));
+}
+
+.mail-cal-full__event-row--status-proposed .mail-cal-full__event-time-badge {
+  background: color-mix(in srgb, #f59e0b 18%, var(--surface));
+  color: #b45309;
+}
+
+.mail-cal-full__event-row--status-confirmed {
+  border-left: 3px solid #10b981;
+}
+
+.mail-cal-full__event-row--status-confirmed::after {
+  content: '✓';
+  position: absolute;
+  right: 36px;
+  top: 8px;
+  color: #10b981;
+  font-weight: 700;
+  font-size: 11px;
+}
+
+.mail-cal-full__event-row--all-day {
+  background: color-mix(in srgb, var(--accent) 4%, var(--surface));
+}
+
+.mail-cal-full__event-row--all-day .mail-cal-full__event-time-badge {
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+  color: var(--accent);
+}
+
+.mail-cal-full__event-ai-icon {
+  display: inline-block;
+  vertical-align: -1px;
+  margin-right: 4px;
+  color: var(--accent);
+}
+
+/* Dashboard widget popover variant */
+
+.mail-dash-cal-popover__event--status-proposed {
+  border-style: dashed !important;
+  background: color-mix(in srgb, #f59e0b 5%, var(--surface));
+}
+
+.mail-dash-cal-popover__event--status-proposed .mail-dash-cal-popover__ev-time {
+  color: #b45309;
+}
+
+.mail-dash-cal-popover__event--status-confirmed::before {
+  content: '✓';
+  position: absolute;
+  right: 6px;
+  top: 4px;
+  color: #10b981;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.mail-dash-cal-popover__event--all-day .mail-dash-cal-popover__ev-time {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Subtle hint legend (optional, can be added near calendar header):
+ *   - dashed amber border = AI önerisi (kullanıcı onayı bekliyor)
+ *   - yeşil ✓             = senkronize
+ */

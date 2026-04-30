@@ -516,14 +516,28 @@ export function CalendarWidgetBody({ copy }: Props) {
                       {popoverEvents.map((ev) => {
                         const c = entryColor(ev.type, ev.color);
                         const isEditing = editingId === ev.id;
+                        const status = ev.status ?? 'PENDING';
+                        const classes = [
+                          'mail-dash-cal-popover__event',
+                          `mail-dash-cal-popover__event--${ev.type}`,
+                          `mail-dash-cal-popover__event--status-${status.toLowerCase()}`,
+                          ev.isAllDay ? 'mail-dash-cal-popover__event--all-day' : '',
+                          ev.fromAi ? 'mail-dash-cal-popover__event--ai' : '',
+                          isEditing ? 'mail-dash-cal-popover__event--editing' : '',
+                        ]
+                          .filter(Boolean)
+                          .join(' ');
                         return (
                         <li
                           key={ev.id}
-                          className={`mail-dash-cal-popover__event mail-dash-cal-popover__event--${ev.type} ${isEditing ? 'mail-dash-cal-popover__event--editing' : ''}`}
+                          className={classes}
                           style={{ ['--entry-color' as string]: c, borderColor: `color-mix(in srgb, ${c} 35%, var(--border))` }}
+                          title={status === 'PROPOSED' ? 'AI önerisi — onayınız bekleniyor' : undefined}
                         >
                           <span className="mail-dash-cal-popover__ev-dot" aria-hidden style={{ background: c }} />
-                          <span className="mail-dash-cal-popover__ev-time">{ev.time}</span>
+                          <span className="mail-dash-cal-popover__ev-time">
+                            {ev.isAllDay ? 'Tüm gün' : ev.time}
+                          </span>
                           <div className="mail-dash-cal-popover__ev-body">
                             <span className="mail-dash-cal-popover__ev-title">{ev.title}</span>
                             {ev.note ? (
