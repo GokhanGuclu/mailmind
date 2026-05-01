@@ -41,6 +41,11 @@ export class AiProposalsController {
     return this.svc.byMessage(this.uid(req));
   }
 
+  @Get('by-message/:messageId')
+  forMessage(@Req() req: Request, @Param('messageId') messageId: string) {
+    return this.svc.forMessage(this.uid(req), messageId);
+  }
+
   @Post(':kind/:id/approve')
   approve(
     @Req() req: Request,

@@ -610,6 +610,7 @@ export function MailInboxPage() {
                   model={messageToReader(openedMessage, language)}
                   variant="inbox"
                   copy={copy}
+                  messageId={openedMessage.id}
                   onClose={closeMessage}
                   onDelete={() => deleteMessage(openedMessage.id)}
                   onSpam={() => markAsSpam(openedMessage.id)}

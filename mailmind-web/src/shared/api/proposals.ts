@@ -79,6 +79,13 @@ export const proposalsApi = {
     });
   },
 
+  forMessage(accessToken: string, messageId: string) {
+    return apiRequest<ProposalsList>(
+      `/ai/proposals/by-message/${encodeURIComponent(messageId)}`,
+      { method: 'GET', token: accessToken },
+    );
+  },
+
   approve(accessToken: string, kind: ProposalKind, id: string) {
     return apiRequest<ApiTaskProposal | ApiCalendarEvent | ApiReminderProposal>(
       `/ai/proposals/${kind}/${id}/approve`,

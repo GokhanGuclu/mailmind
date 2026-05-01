@@ -3,22 +3,34 @@ import {
   LuArchive,
   LuArrowLeft,
   LuBan,
+  LuCalendar,
+  LuCheck,
   LuInbox,
+  LuListTodo,
   LuLoader,
   LuRotateCcw,
   LuSparkles,
   LuTrash2,
+  LuX,
 } from 'react-icons/lu';
 
 import type { MailDashboardCopy } from './page.mock-data';
 import type { MailReaderFolderVariant, MailReaderModel } from './mail-reader-model';
 import { sanitizeMailHtml } from './sanitize-mail-html';
+import { useAuth } from '../../shared/context/auth-context';
+import {
+  proposalsApi,
+  type ProposalsList,
+  type ProposalKind,
+} from '../../shared/api/proposals';
 
 type Props = {
   model: MailReaderModel;
   copy: MailDashboardCopy;
   onClose: () => void;
   variant: MailReaderFolderVariant;
+  /** Mailin id'si — verildiğinde sağ panelde AI önerileri yüklenir. */
+  messageId?: string | null;
   onSummarize?: () => Promise<string | null>;
   onDelete?: () => void;
   onRestore?: () => void;
@@ -49,7 +61,7 @@ function useTypewriter(text: string | null) {
   return displayed;
 }
 
-export function MailMessageReader({ model, copy, onClose, variant, onSummarize, onDelete, onRestore, onSpam }: Props) {
+export function MailMessageReader({ model, copy, onClose, variant, messageId, onSummarize, onDelete, onRestore, onSpam }: Props) {
   const htmlBody = model.bodyHtml?.trim() ? sanitizeMailHtml(model.bodyHtml.trim()) : '';
   const paragraphs = model.bodyText.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
   const files = model.attachmentNames;
@@ -72,6 +84,69 @@ export function MailMessageReader({ model, copy, onClose, variant, onSummarize, 
   const canSummarize = !isSpamFolder && !hasSummary && Boolean(onSummarize);
   // Spam için de kart göster
   const showAiCard = isSpamFolder || hasSummary || canSummarize || summarizing;
+
+  // ── AI önerileri (sağ panel) ─────────────────────────────────────────────
+  const { accessToken } = useAuth();
+  const [proposals, setProposals] = useState<ProposalsList | null>(null);
+  const [proposalsLoading, setProposalsLoading] = useState(false);
+  const [pendingActionId, setPendingActionId] = useState<string | null>(null);
+  const proposalsAvailable = Boolean(messageId) && variant === 'inbox';
+
+  useEffect(() => {
+    if (!proposalsAvailable || !accessToken || !messageId) {
+      setProposals(null);
+      return;
+    }
+    let cancelled = false;
+    setProposalsLoading(true);
+    proposalsApi
+      .forMessage(accessToken, messageId)
+      .then((res) => {
+        if (!cancelled) setProposals(res);
+      })
+      .catch(() => {
+        if (!cancelled) setProposals({ tasks: [], calendarEvents: [], reminders: [] });
+      })
+      .finally(() => {
+        if (!cancelled) setProposalsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [proposalsAvailable, accessToken, messageId]);
+
+  const handleProposalAction = async (
+    kind: ProposalKind,
+    id: string,
+    action: 'approve' | 'reject',
+  ) => {
+    if (!accessToken || pendingActionId) return;
+    setPendingActionId(id);
+    try {
+      if (action === 'approve') {
+        await proposalsApi.approve(accessToken, kind, id);
+      } else {
+        await proposalsApi.reject(accessToken, kind, id);
+      }
+      setProposals((prev) => {
+        if (!prev) return prev;
+        return {
+          tasks: prev.tasks.filter((t) => t.id !== id),
+          calendarEvents: prev.calendarEvents.filter((e) => e.id !== id),
+          reminders: prev.reminders.filter((r) => r.id !== id),
+        };
+      });
+    } catch {
+      // sessizce yut — kullanıcı tekrar deneyebilir
+    } finally {
+      setPendingActionId(null);
+    }
+  };
+
+  const proposalsTotal = proposals
+    ? proposals.tasks.length + proposals.calendarEvents.length + proposals.reminders.length
+    : 0;
+  const showProposalsPanel = proposalsAvailable && (proposalsLoading || proposalsTotal > 0);
 
   const handleSummarize = async () => {
     if (!onSummarize || summarizing) return;
@@ -158,6 +233,7 @@ export function MailMessageReader({ model, copy, onClose, variant, onSummarize, 
         </div>
       </header>
 
+      <div className="mail-inbox-reader__main">
       <div className="mail-inbox-reader__scroll">
         {/* AI özet kartı — her zaman görünür (spam / özet var / buton) */}
         {showAiCard ? (
@@ -260,6 +336,172 @@ export function MailMessageReader({ model, copy, onClose, variant, onSummarize, 
             </ul>
           </div>
         ) : null}
+      </div>
+
+      {showProposalsPanel ? (
+        <aside
+          className="mail-inbox-reader__proposals"
+          aria-label={isTr ? 'AI önerileri' : 'AI suggestions'}
+        >
+          <div className="mail-inbox-reader__proposals-head">
+            <LuSparkles size={16} strokeWidth={2} aria-hidden />
+            <span className="mail-inbox-reader__proposals-title">
+              {isTr ? 'AI Önerileri' : 'AI Suggestions'}
+            </span>
+            {proposalsTotal > 0 ? (
+              <span className="mail-inbox-reader__proposals-count">{proposalsTotal}</span>
+            ) : null}
+          </div>
+
+          {proposalsLoading ? (
+            <div className="mail-inbox-reader__proposals-loading">
+              <LuLoader size={14} strokeWidth={2.5} aria-hidden />
+              <span>{isTr ? 'Yükleniyor...' : 'Loading...'}</span>
+            </div>
+          ) : proposalsTotal === 0 ? (
+            <p className="mail-inbox-reader__proposals-empty">
+              {isTr
+                ? 'Bu mail için bekleyen AI önerisi yok.'
+                : 'No pending AI suggestions for this email.'}
+            </p>
+          ) : (
+            <ul className="mail-inbox-reader__proposals-list">
+              {proposals?.tasks.map((t) => (
+                <li key={t.id} className="mail-inbox-reader__proposal-item">
+                  <div className="mail-inbox-reader__proposal-head">
+                    <LuListTodo size={14} strokeWidth={2} aria-hidden />
+                    <span className="mail-inbox-reader__proposal-kind">
+                      {isTr ? 'Görev' : 'Task'}
+                    </span>
+                  </div>
+                  <p className="mail-inbox-reader__proposal-title">{t.title}</p>
+                  {t.dueAt ? (
+                    <p className="mail-inbox-reader__proposal-meta">
+                      {isTr ? 'Son tarih: ' : 'Due: '}
+                      {new Date(t.dueAt).toLocaleString(isTr ? 'tr-TR' : 'en-US', {
+                        day: 'numeric',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                  ) : null}
+                  {t.notes ? (
+                    <p className="mail-inbox-reader__proposal-notes">{t.notes}</p>
+                  ) : null}
+                  <div className="mail-inbox-reader__proposal-actions">
+                    <button
+                      type="button"
+                      className="mail-inbox-reader__proposal-btn mail-inbox-reader__proposal-btn--approve"
+                      onClick={() => handleProposalAction('task', t.id, 'approve')}
+                      disabled={pendingActionId === t.id}
+                    >
+                      <LuCheck size={13} strokeWidth={2.5} aria-hidden />
+                      <span>{isTr ? 'Onayla' : 'Approve'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="mail-inbox-reader__proposal-btn mail-inbox-reader__proposal-btn--reject"
+                      onClick={() => handleProposalAction('task', t.id, 'reject')}
+                      disabled={pendingActionId === t.id}
+                    >
+                      <LuX size={13} strokeWidth={2.5} aria-hidden />
+                      <span>{isTr ? 'Reddet' : 'Reject'}</span>
+                    </button>
+                  </div>
+                </li>
+              ))}
+              {proposals?.calendarEvents.map((e) => (
+                <li key={e.id} className="mail-inbox-reader__proposal-item">
+                  <div className="mail-inbox-reader__proposal-head">
+                    <LuCalendar size={14} strokeWidth={2} aria-hidden />
+                    <span className="mail-inbox-reader__proposal-kind">
+                      {isTr ? 'Etkinlik' : 'Event'}
+                    </span>
+                  </div>
+                  <p className="mail-inbox-reader__proposal-title">{e.title}</p>
+                  <p className="mail-inbox-reader__proposal-meta">
+                    {new Date(e.startAt).toLocaleString(isTr ? 'tr-TR' : 'en-US', {
+                      day: 'numeric',
+                      month: 'short',
+                      hour: e.isAllDay ? undefined : '2-digit',
+                      minute: e.isAllDay ? undefined : '2-digit',
+                    })}
+                    {e.location ? ` · ${e.location}` : ''}
+                  </p>
+                  {e.description ? (
+                    <p className="mail-inbox-reader__proposal-notes">{e.description}</p>
+                  ) : null}
+                  <div className="mail-inbox-reader__proposal-actions">
+                    <button
+                      type="button"
+                      className="mail-inbox-reader__proposal-btn mail-inbox-reader__proposal-btn--approve"
+                      onClick={() => handleProposalAction('calendar-event', e.id, 'approve')}
+                      disabled={pendingActionId === e.id}
+                    >
+                      <LuCheck size={13} strokeWidth={2.5} aria-hidden />
+                      <span>{isTr ? 'Onayla' : 'Approve'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="mail-inbox-reader__proposal-btn mail-inbox-reader__proposal-btn--reject"
+                      onClick={() => handleProposalAction('calendar-event', e.id, 'reject')}
+                      disabled={pendingActionId === e.id}
+                    >
+                      <LuX size={13} strokeWidth={2.5} aria-hidden />
+                      <span>{isTr ? 'Reddet' : 'Reject'}</span>
+                    </button>
+                  </div>
+                </li>
+              ))}
+              {proposals?.reminders.map((r) => (
+                <li key={r.id} className="mail-inbox-reader__proposal-item">
+                  <div className="mail-inbox-reader__proposal-head">
+                    <LuSparkles size={14} strokeWidth={2} aria-hidden />
+                    <span className="mail-inbox-reader__proposal-kind">
+                      {isTr ? 'Hatırlatıcı' : 'Reminder'}
+                    </span>
+                  </div>
+                  <p className="mail-inbox-reader__proposal-title">{r.title}</p>
+                  {r.fireAt ? (
+                    <p className="mail-inbox-reader__proposal-meta">
+                      {new Date(r.fireAt).toLocaleString(isTr ? 'tr-TR' : 'en-US', {
+                        day: 'numeric',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                  ) : null}
+                  {r.notes ? (
+                    <p className="mail-inbox-reader__proposal-notes">{r.notes}</p>
+                  ) : null}
+                  <div className="mail-inbox-reader__proposal-actions">
+                    <button
+                      type="button"
+                      className="mail-inbox-reader__proposal-btn mail-inbox-reader__proposal-btn--approve"
+                      onClick={() => handleProposalAction('reminder', r.id, 'approve')}
+                      disabled={pendingActionId === r.id}
+                    >
+                      <LuCheck size={13} strokeWidth={2.5} aria-hidden />
+                      <span>{isTr ? 'Onayla' : 'Approve'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="mail-inbox-reader__proposal-btn mail-inbox-reader__proposal-btn--reject"
+                      onClick={() => handleProposalAction('reminder', r.id, 'reject')}
+                      disabled={pendingActionId === r.id}
+                    >
+                      <LuX size={13} strokeWidth={2.5} aria-hidden />
+                      <span>{isTr ? 'Reddet' : 'Reject'}</span>
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </aside>
+      ) : null}
       </div>
     </section>
   );

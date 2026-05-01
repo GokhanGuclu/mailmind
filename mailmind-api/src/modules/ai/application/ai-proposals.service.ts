@@ -110,6 +110,31 @@ export class AiProposalsService {
     return map;
   }
 
+  /**
+   * Tek bir mail için PROPOSED durumdaki AI önerilerini döndürür
+   * (reader sağ panelinde göstermek için).
+   */
+  async forMessage(userId: string, mailboxMessageId: string) {
+    const analysisFilter = {
+      aiAnalysis: { is: { mailboxMessageId, userId } },
+    } as const;
+    const [tasks, calendarEvents, reminders] = await Promise.all([
+      this.prisma.task.findMany({
+        where: { userId, status: 'PROPOSED', ...analysisFilter },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.calendarEvent.findMany({
+        where: { userId, status: 'PROPOSED', ...analysisFilter },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.reminder.findMany({
+        where: { userId, status: 'PROPOSED', ...analysisFilter },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+    return { tasks, calendarEvents, reminders };
+  }
+
   async approve(userId: string, kind: ProposalKind, id: string) {
     switch (kind) {
       case 'task':
