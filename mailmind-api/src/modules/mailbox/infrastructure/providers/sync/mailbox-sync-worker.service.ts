@@ -61,6 +61,38 @@ export class MailboxSyncWorkerService implements OnModuleInit {
     });
   }
 
+  /**
+   * INCREMENTAL job tetikler — son DONE cursor'unu kullanır.
+   * Idempotent (PENDING/RUNNING varsa atla). SMTP send sonrası "yeni mailim
+   * SENT'te belirsin" gibi anlık tazeleme istekleri için.
+   */
+  async enqueueIncrementalForMailbox(mailboxAccountId: string): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      const existing = await tx.mailboxSyncJob.findFirst({
+        where: { mailboxAccountId, status: { in: ['PENDING', 'RUNNING'] } },
+      });
+      if (existing) return;
+
+      const lastDone = await tx.mailboxSyncJob.findFirst({
+        where: { mailboxAccountId, status: 'DONE' },
+        orderBy: { finishedAt: 'desc' },
+        select: { cursor: true },
+      });
+
+      await tx.mailboxSyncJob.create({
+        data: {
+          mailboxAccountId,
+          type: 'INCREMENTAL',
+          status: 'PENDING',
+          cursor: lastDone?.cursor ?? null,
+        },
+      });
+      this.logger.log(
+        `Enqueued post-action INCREMENTAL sync for mailbox=${mailboxAccountId}`,
+      );
+    });
+  }
+
   async processOnce(): Promise<void> {
     // 1) Stale RUNNING job'ları kurtar
     await this.recoverStaleRunningJobs();

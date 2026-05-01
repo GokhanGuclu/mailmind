@@ -9,6 +9,7 @@ import * as nodemailer from 'nodemailer';
 import { PrismaService } from '../../../../shared/infrastructure/prisma/prisma.service';
 import { CredentialCipher } from '../../../../shared/infrastructure/security/credential-cipher';
 import { SendMessageDto } from '../../application/dto/send-message.dto';
+import { MailboxSyncWorkerService } from '../providers/sync/mailbox-sync-worker.service';
 
 @Injectable()
 export class MailboxSmtpService {
@@ -17,6 +18,7 @@ export class MailboxSmtpService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cipher: CredentialCipher,
+    private readonly syncWorker: MailboxSyncWorkerService,
   ) {}
 
   async send(userId: string, accountId: string, dto: SendMessageDto): Promise<{ messageId: string }> {
@@ -80,6 +82,20 @@ export class MailboxSmtpService {
     });
 
     this.logger.log(`Mail sent: messageId=${info.messageId} from=${account.email} to=${dto.to.join(',')}`);
+
+    // SMTP send başarılı → IMAP sync'in 30sn cooldown'unu bekleme,
+    // anında INCREMENTAL job aç. Worker bir sonraki tick'te (~1sn)
+    // SENT klasörünü çekip yeni maili DB'ye yazar; oradan AI hattı zaten
+    // anlık (AI worker 2sn'de bir polling yapıyor). Toplam gecikme
+    // 80sn'den ~15-20sn'ye iner.
+    try {
+      await this.syncWorker.enqueueIncrementalForMailbox(accountId);
+    } catch (err: any) {
+      // Sync tetiklemesi best-effort; send başarılı, mail karşı tarafa gitti.
+      this.logger.warn(
+        `Post-send sync trigger failed (non-fatal) for mailbox=${accountId}: ${err?.message ?? String(err)}`,
+      );
+    }
 
     return { messageId: info.messageId };
   }

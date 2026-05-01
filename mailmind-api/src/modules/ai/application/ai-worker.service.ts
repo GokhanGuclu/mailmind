@@ -24,7 +24,10 @@ export class AiWorkerService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    const intervalMs = Number(process.env.AI_WORKER_INTERVAL_MS ?? 5_000);
+    // 2sn default — kullanıcının algıladığı "AI önerisi ne zaman düşecek"
+    // gecikmesini düşürür. Boş tabloda findFirst nearly-free; CPU/DB cost
+    // ihmal edilebilir. Override için AI_WORKER_INTERVAL_MS env.
+    const intervalMs = Number(process.env.AI_WORKER_INTERVAL_MS ?? 2_000);
     this.interval = setInterval(() => {
       this.tick().catch((err) => {
         this.logger.error('AI worker tick failed', err?.stack ?? String(err));
