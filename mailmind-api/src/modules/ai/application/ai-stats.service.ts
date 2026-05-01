@@ -36,6 +36,16 @@ export type AiStatsSummary = {
     processedAt: Date | null;
     createdAt: Date;
   }>;
+  /**
+   * Pencere içinde günlük breakdown (eski → yeni). Boş günler 0 ile doldurulur.
+   * Tarih: ISO `YYYY-MM-DD` (UTC).
+   */
+  daily: Array<{
+    date: string;
+    total: number;
+    done: number;
+    failed: number;
+  }>;
 };
 
 @Injectable()
@@ -73,10 +83,14 @@ export class AiStatsService {
     let totalOutput = 0;
     const latencies: number[] = [];
     const modelCounts: Record<string, number> = {};
+    const dailyMap: Record<string, { total: number; done: number; failed: number }> = {};
 
     for (const r of rows) {
-      if (r.status === 'DONE') done++;
-      else if (r.status === 'FAILED') failed++;
+      const dayKey = r.createdAt.toISOString().slice(0, 10); // YYYY-MM-DD UTC
+      const bucket = (dailyMap[dayKey] ??= { total: 0, done: 0, failed: 0 });
+      bucket.total++;
+      if (r.status === 'DONE') { done++; bucket.done++; }
+      else if (r.status === 'FAILED') { failed++; bucket.failed++; }
       else if (r.status === 'PENDING' || r.status === 'PROCESSING') pending++;
 
       // "No actions" = DONE ama summary boş (ya AI hiçbir şey çıkaramadı, ya
@@ -137,6 +151,9 @@ export class AiStatsService {
     const settled = done + failed;
     const failureRate = settled === 0 ? 0 : failed / settled;
 
+    // Daily timeseries — pencerede her gün için sıfırla doldur (UTC, eski → yeni)
+    const daily = this.fillDaily(dailyMap, windowDays);
+
     return {
       windowDays,
       totalAnalyses,
@@ -161,10 +178,32 @@ export class AiStatsService {
         processedAt: r.processedAt,
         createdAt: r.createdAt,
       })),
+      daily,
     };
   }
 
   // ─── Helpers ───────────────────────────────────────────────────────────
+
+  /**
+   * Pencere içindeki HER günü çıktı'ya koyar (eksik günler 0). Frontend chart
+   * için gap'siz X ekseni şart. UTC bazlı; kullanıcı timezone'unda küçük
+   * kayma olabilir ama özet metrik için yeterli.
+   */
+  private fillDaily(
+    map: Record<string, { total: number; done: number; failed: number }>,
+    windowDays: number,
+  ): AiStatsSummary['daily'] {
+    const out: AiStatsSummary['daily'] = [];
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    for (let i = windowDays - 1; i >= 0; i--) {
+      const d = new Date(today.getTime() - i * 86_400_000);
+      const key = d.toISOString().slice(0, 10);
+      const v = map[key] ?? { total: 0, done: 0, failed: 0 };
+      out.push({ date: key, ...v });
+    }
+    return out;
+  }
 
   private aggLatency(samples: number[]): AiStatsSummary['latency'] {
     if (samples.length === 0) {

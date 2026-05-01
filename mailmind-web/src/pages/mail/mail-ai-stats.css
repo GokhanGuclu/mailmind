@@ -266,3 +266,127 @@
   background: color-mix(in srgb, #f59e0b 16%, var(--surface));
   color: #b45309;
 }
+
+/* ─── Success banner + daily chart ─────────────────────────────────────── */
+
+.ai-stats-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  border: 1px solid transparent;
+}
+
+.ai-stats-banner--good {
+  background: color-mix(in srgb, #10b981 12%, var(--surface));
+  border-color: color-mix(in srgb, #10b981 35%, transparent);
+  color: color-mix(in srgb, #10b981 80%, var(--text));
+}
+
+.ai-stats-banner--warn {
+  background: color-mix(in srgb, #f59e0b 12%, var(--surface));
+  border-color: color-mix(in srgb, #f59e0b 35%, transparent);
+  color: color-mix(in srgb, #f59e0b 80%, var(--text));
+}
+
+.ai-stats-banner__icon {
+  flex: 0 0 auto;
+}
+
+.ai-stats-banner__text {
+  flex: 1 1 auto;
+  line-height: 1.5;
+}
+
+.ai-stats-banner__text strong {
+  font-weight: 700;
+}
+
+.ai-stats-chart-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ai-stats-chart-card h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ai-stats-chart-svg {
+  width: 100%;
+  height: 160px;
+  display: block;
+}
+
+.ai-stats-chart-svg .ai-stats-chart-area {
+  fill: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.ai-stats-chart-svg .ai-stats-chart-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.ai-stats-chart-svg .ai-stats-chart-line--failed {
+  stroke: #e11d48;
+  stroke-width: 1.5;
+  stroke-dasharray: 3 3;
+}
+
+.ai-stats-chart-svg .ai-stats-chart-grid {
+  stroke: var(--border);
+  stroke-width: 1;
+  stroke-dasharray: 2 4;
+}
+
+.ai-stats-chart-svg text {
+  font-size: 10px;
+  fill: var(--muted);
+}
+
+.ai-stats-chart-card__legend {
+  display: flex;
+  gap: 14px;
+  font-size: 11.5px;
+  color: var(--muted);
+  flex-wrap: wrap;
+}
+
+.ai-stats-chart-card__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ai-stats-chart-card__legend-swatch {
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--accent);
+}
+
+.ai-stats-chart-card__legend-swatch--failed {
+  background: #e11d48;
+}
+
+.ai-stats-chart-empty {
+  font-size: 12.5px;
+  color: var(--muted);
+  text-align: center;
+  padding: 20px 0;
+}

@@ -30,6 +30,12 @@ export type AiStatsSummary = {
     processedAt: string | null;
     createdAt: string;
   }>;
+  daily: Array<{
+    date: string;
+    total: number;
+    done: number;
+    failed: number;
+  }>;
 };
 
 export const aiStatsApi = {

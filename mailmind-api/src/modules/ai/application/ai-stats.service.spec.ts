@@ -81,6 +81,28 @@ describe('AiStatsService.summary()', () => {
     expect(out.latency.p50Ms).toBe(600); // index floor(10*0.5)=5
   });
 
+  it('daily timeseries has windowDays buckets, fills missing days with zeros', async () => {
+    const today = new Date();
+    aiAnalysis.findMany.mockResolvedValue([
+      { id: 'a1', status: 'DONE',   model: 'm', latencyMs: 100, inputTokens: 10, outputTokens: 5, summary: 'x', processedAt: today, createdAt: today },
+      { id: 'a2', status: 'FAILED', model: 'm', latencyMs: null, inputTokens: null, outputTokens: null, summary: null, processedAt: null, createdAt: today },
+      { id: 'a3', status: 'DONE',   model: 'm', latencyMs: 200, inputTokens: 20, outputTokens: 10, summary: 'y', processedAt: today, createdAt: today },
+    ]);
+
+    const out = await svc.summary('u1', 7);
+
+    expect(out.daily).toHaveLength(7);
+    // İlk 6 gün boş olmalı
+    for (let i = 0; i < 6; i++) {
+      expect(out.daily[i]).toEqual(expect.objectContaining({ total: 0, done: 0, failed: 0 }));
+    }
+    // Son gün = bugün, 3 analiz dolu
+    expect(out.daily[6]).toEqual(expect.objectContaining({ total: 3, done: 2, failed: 1 }));
+    // Tarihler eski → yeni sıralı, ISO format
+    expect(out.daily[0].date < out.daily[6].date).toBe(true);
+    expect(out.daily[6].date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
   it('caps recent[] at 20 items, ordered desc by query', async () => {
     aiAnalysis.findMany.mockResolvedValue(
       Array.from({ length: 50 }, (_, i) => ({
