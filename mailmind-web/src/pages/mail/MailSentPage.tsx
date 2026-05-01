@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   LuArchive,
   LuChevronDown,
@@ -6,6 +7,7 @@ import {
   LuChevronRight,
   LuEllipsisVertical,
   LuRefreshCw,
+  LuSparkles,
   LuStar,
   LuTrash2,
   LuX,
@@ -102,6 +104,25 @@ export function MailSentPage() {
   const [error, setError] = useState<string | null>(null);
   const [cursors, setCursors] = useState<string[]>([]);
   const [hasMore, setHasMore] = useState(false);
+
+  // ─── Post-send hint ─────────────────────────────────────────────────────
+  // Compose sayfası başarılı send sonrası state.justSent ile bu sayfaya yönlendirir.
+  // Banner ~10 sn görünür, X ile kapatılabilir, sayfa yenilense dahi tekrar
+  // gösterilmesin diye state'i location'dan temizliyoruz (replace navigate).
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [showSentHint, setShowSentHint] = useState(
+    Boolean((location.state as { justSent?: boolean } | null)?.justSent),
+  );
+
+  useEffect(() => {
+    if (!showSentHint) return;
+    // location state'i temizle ki F5 sonrası tekrar görünmesin
+    navigate(location.pathname, { replace: true, state: null });
+    const t = setTimeout(() => setShowSentHint(false), 10_000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [pageIndex, setPageIndex] = useState(0);
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
@@ -266,6 +287,23 @@ export function MailSentPage() {
 
   return (
     <main className="mail-dash-main mail-dash-main--inbox-only">
+      {showSentHint && (
+        <div className="mail-sent-hint" role="status">
+          <LuSparkles size={16} aria-hidden />
+          <span className="mail-sent-hint__text">
+            Mail gönderildi. AI birkaç saniye içinde özet ve önerileri çıkaracak —
+            <strong> AI Önerileri</strong> sekmesinde görebilirsin.
+          </span>
+          <button
+            type="button"
+            className="mail-sent-hint__close"
+            onClick={() => setShowSentHint(false)}
+            aria-label="Kapat"
+          >
+            <LuX size={14} />
+          </button>
+        </div>
+      )}
       <div className="mail-inbox">
         <div className="mail-dash-widget__body mail-dash-widget__body--inbox mail-inbox-list__wrap">
           <div

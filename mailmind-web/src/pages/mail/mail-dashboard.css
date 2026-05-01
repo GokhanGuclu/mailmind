@@ -4263,3 +4263,54 @@
   color: #e11d48;
   border-color: color-mix(in srgb, #e11d48 50%, var(--border));
 }
+
+/* ─── Sent page post-send hint ─────────────────────────────────────────── */
+
+.mail-sent-hint {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 16px 0;
+  padding: 10px 14px;
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  color: var(--text);
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.45;
+  animation: mail-sent-hint-in 200ms ease-out;
+}
+
+@keyframes mail-sent-hint-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.mail-sent-hint__text {
+  flex: 1 1 auto;
+}
+
+.mail-sent-hint__text strong {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.mail-sent-hint__close {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.mail-sent-hint__close:hover {
+  background: color-mix(in srgb, var(--muted) 14%, transparent);
+  color: var(--text);
+}

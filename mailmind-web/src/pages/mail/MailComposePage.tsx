@@ -361,7 +361,7 @@ export function MailComposePage() {
             // taslak silinemezse kullanıcıyı engellemeyelim
           }
         }
-        navigate('/mail/gonderilen');
+        navigate('/mail/gonderilen', { state: { justSent: true } });
       } catch (err: any) {
         setError(err?.message ?? (language === 'tr' ? 'Gönderim başarısız.' : 'Send failed.'));
       } finally {
