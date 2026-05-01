@@ -117,6 +117,19 @@ export function MailAccountsPage() {
                   </div>
                   <span className="account-card__provider">{acc.provider}</span>
                   {acc.displayName && <span className="account-card__display">{acc.displayName}</span>}
+                  {isPaused && acc.lastSyncStatus === 'FAILED' && (
+                    <div className="account-card__paused-hint">
+                      <LuCircleAlert size={14} aria-hidden />
+                      <div>
+                        <strong>Son senkronizasyonlar başarısız.</strong> Hesap art arda hata
+                        verince otomatik olarak duraklatıldı. Şifreyi/yetkiyi yenileyip
+                        <em> Devam ettir</em> diyebilirsin.
+                        {acc.lastSyncError && (
+                          <div className="account-card__error">Son hata: {acc.lastSyncError}</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="account-card__actions">
                   {canToggle ? (

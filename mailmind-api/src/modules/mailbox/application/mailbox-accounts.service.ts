@@ -187,19 +187,29 @@ export class MailboxAccountsService {
   }
 
   async list(userId: string) {
-    return this.prisma.mailboxAccount.findMany({
+    const rows = await this.prisma.mailboxAccount.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
       select: {
-        id: true,
-        userId: true,
-        provider: true,
-        email: true,
-        displayName: true,
-        status: true,
-        createdAt: true,
-        updatedAt: true,
+        ...this.accountSelect,
+        // Son terminal sync (DONE/FAILED) — auto-pause sebebini UI'da göstermek için.
+        syncJobs: {
+          where: { status: { in: ['DONE', 'FAILED'] }, finishedAt: { not: null } },
+          orderBy: { finishedAt: 'desc' },
+          take: 1,
+          select: { status: true, errorMessage: true, finishedAt: true },
+        },
       },
+    });
+
+    return rows.map(({ syncJobs, ...rest }) => {
+      const last = syncJobs[0] ?? null;
+      return {
+        ...rest,
+        lastSyncStatus: last?.status ?? null,
+        lastSyncError: last?.errorMessage ?? null,
+        lastSyncAt: last?.finishedAt ?? null,
+      };
     });
   }
   async create(userId: string, dto: CreateMailboxAccountDto) {

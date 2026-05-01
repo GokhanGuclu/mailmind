@@ -11,6 +11,10 @@ export type MailboxAccount = {
   status: MailboxAccountStatus;
   createdAt: string;
   updatedAt: string;
+  /** Sadece /mailbox/accounts (list) içinde dolu; pause/resume yanıtında null. */
+  lastSyncStatus?: 'DONE' | 'FAILED' | null;
+  lastSyncError?: string | null;
+  lastSyncAt?: string | null;
 };
 
 export const mailboxApi = {

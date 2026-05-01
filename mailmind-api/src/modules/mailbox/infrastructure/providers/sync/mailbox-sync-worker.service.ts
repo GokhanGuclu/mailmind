@@ -135,7 +135,13 @@ export class MailboxSyncWorkerService implements OnModuleInit {
       });
     } catch (err: any) {
       const errorMessage = String(err?.message ?? err);
-      await this.handleSyncFailure(job.id, job.attemptCount, errorMessage, err);
+      await this.handleSyncFailure(
+        job.id,
+        job.mailboxAccountId,
+        job.attemptCount,
+        errorMessage,
+        err,
+      );
     }
   }
 
@@ -150,6 +156,7 @@ export class MailboxSyncWorkerService implements OnModuleInit {
    */
   private async handleSyncFailure(
     jobId: string,
+    mailboxAccountId: string,
     currentAttemptCount: number,
     errorMessage: string,
     err: any,
@@ -170,6 +177,7 @@ export class MailboxSyncWorkerService implements OnModuleInit {
         `Sync job FAILED (terminal) id=${jobId} attempt=${attemptCount}/${MAX_ATTEMPTS}: ${errorMessage}`,
         err?.stack,
       );
+      await this.maybeAutoPauseMailbox(mailboxAccountId);
       return;
     }
 
@@ -187,6 +195,46 @@ export class MailboxSyncWorkerService implements OnModuleInit {
     this.logger.warn(
       `Sync retry scheduled id=${jobId} attempt=${attemptCount}/${MAX_ATTEMPTS} nextRetryAt=${nextRetryAt.toISOString()}: ${errorMessage}`,
     );
+  }
+
+  /**
+   * Art arda N (default 3) FAILED terminal sync sonrası mailbox'ı otomatik
+   * PAUSED'a çeker — credentials geçersizleşmiş / parola değişmiş hesaplar
+   * her saatte bir tek kullanıcısız retry yapıp log spam'i yapmasın diye.
+   *
+   * - Sadece status='ACTIVE' iken devreye girer (idempotent updateMany).
+   * - DONE araya girerse zincir kırılır → tekrar normalleşmiş demektir.
+   * - Kullanıcı UI'dan "Devam ettir" diyince ACTIVE'e döner; sorun çözülmediyse
+   *   3 fail sonra tekrar PAUSED olur.
+   */
+  private async maybeAutoPauseMailbox(mailboxAccountId: string): Promise<void> {
+    const threshold = Number(process.env.MAILBOX_AUTO_PAUSE_THRESHOLD ?? 3);
+    if (threshold <= 0) return;
+
+    const recentTerminal = await this.prisma.mailboxSyncJob.findMany({
+      where: {
+        mailboxAccountId,
+        status: { in: ['DONE', 'FAILED'] },
+        finishedAt: { not: null },
+      },
+      orderBy: { finishedAt: 'desc' },
+      take: threshold,
+      select: { status: true },
+    });
+
+    if (recentTerminal.length < threshold) return;
+    if (recentTerminal.some((j) => j.status !== 'FAILED')) return;
+
+    const result = await this.prisma.mailboxAccount.updateMany({
+      where: { id: mailboxAccountId, status: 'ACTIVE' },
+      data: { status: 'PAUSED' },
+    });
+
+    if (result.count > 0) {
+      this.logger.warn(
+        `Auto-paused mailbox=${mailboxAccountId} after ${threshold} consecutive FAILED syncs.`,
+      );
+    }
   }
 
   /**
