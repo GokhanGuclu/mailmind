@@ -234,274 +234,274 @@ export function MailMessageReader({ model, copy, onClose, variant, messageId, on
       </header>
 
       <div className="mail-inbox-reader__main">
-      <div className="mail-inbox-reader__scroll">
-        {/* AI özet kartı — her zaman görünür (spam / özet var / buton) */}
-        {showAiCard ? (
-          <div
-            className={`mail-inbox-reader__ai-wrap${isSpamFolder ? ' mail-inbox-reader__ai-wrap--spam' : ''}`}
-            role="region"
-            aria-label={isSpamFolder ? copy.readerSpamAiSummaryAria : copy.readerAiSummaryAria}
-          >
-            <div className="mail-inbox-reader__ai-card">
-              <div className="mail-inbox-reader__ai-head">
-                {isSpamFolder ? (
-                  <LuBan className="mail-inbox-reader__ai-sparkle mail-inbox-reader__ai-sparkle--spam" size={18} strokeWidth={2} aria-hidden />
-                ) : (
-                  <LuSparkles className="mail-inbox-reader__ai-sparkle" size={18} strokeWidth={2} aria-hidden />
-                )}
-                <span className={`mail-inbox-reader__ai-label${isSpamFolder ? ' mail-inbox-reader__ai-label--spam' : ''}`}>
-                  {copy.readerAiSummaryLabel}
-                </span>
-              </div>
-
-              {/* İçerik: buton / yükleniyor / özet metni */}
-              {isSpamFolder ? (
-                <p className="mail-inbox-reader__ai-text mail-inbox-reader__ai-text--spam">
-                  {copy.readerSpamNoAiSummaryText}
-                </p>
-              ) : hasSummary ? (
-                <p className="mail-inbox-reader__ai-text">
-                  {displayedSummary}
-                  {/* Yazım devam ediyorsa imleç */}
-                  {localSummary && displayedSummary.length < localSummary.length ? (
-                    <span className="mail-inbox-reader__ai-cursor" aria-hidden>▋</span>
-                  ) : null}
-                </p>
-              ) : summarizing ? (
-                <div className="mail-inbox-reader__ai-loading">
-                  <LuLoader className="mail-inbox-reader__summarize-spinner" size={15} strokeWidth={2.5} aria-hidden />
-                  <span>{isTr ? 'Özetleniyor...' : 'Summarizing...'}</span>
-                </div>
-              ) : (
-                <div className="mail-inbox-reader__ai-btn-wrap">
-                  <button
-                    type="button"
-                    className="mail-inbox-reader__summarize-btn"
-                    onClick={handleSummarize}
-                  >
-                    <LuSparkles size={14} strokeWidth={2} aria-hidden />
-                    <span>{isTr ? 'AI Özetle' : 'AI Summarize'}</span>
-                  </button>
-                  {summarizeError ? (
-                    <p className="mail-inbox-reader__summarize-error">{summarizeError}</p>
-                  ) : null}
-                </div>
-              )}
-            </div>
-          </div>
-        ) : null}
-
-        <div className="mail-inbox-reader__meta">
-          <div className="mail-inbox-reader__from-line">
-            {model.showRecipientPrefix ? (
-              <><span className="mail-inbox-reader__to-prefix">{copy.readerToPrefix}</span>{' '}</>
-            ) : null}
-            <span className="mail-inbox-reader__from-name">{model.displayName}</span>
-            {model.displayEmail ? (
-              <span className="mail-inbox-reader__from-email">&lt;{model.displayEmail}&gt;</span>
-            ) : null}
-          </div>
-          <time className="mail-inbox-reader__when" {...(model.dateTimeIso ? { dateTime: model.dateTimeIso } : {})}>
-            {model.timeDisplay}
-          </time>
-        </div>
-
-        <div className={htmlBody ? 'mail-inbox-reader__body mail-inbox-reader__body--html' : 'mail-inbox-reader__body'}>
-          {htmlBody ? (
+        <div className="mail-inbox-reader__scroll">
+          {/* AI özet kartı — her zaman görünür (spam / özet var / buton) */}
+          {showAiCard ? (
             <div
-              className="mail-inbox-reader__html-root mail-inbox-reader__html-root--marketing"
-              // eslint-disable-next-line react/no-danger -- sanitizeMailHtml ile temizlenir
-              dangerouslySetInnerHTML={{ __html: htmlBody }}
-            />
-          ) : (
-            paragraphs.map((block, i) => (
-              <p key={i} className="mail-inbox-reader__para">
-                {block.split('\n').map((line, j, arr) => (
-                  <span key={j}>
-                    {line}
-                    {j < arr.length - 1 ? <br /> : null}
+              className={`mail-inbox-reader__ai-wrap${isSpamFolder ? ' mail-inbox-reader__ai-wrap--spam' : ''}`}
+              role="region"
+              aria-label={isSpamFolder ? copy.readerSpamAiSummaryAria : copy.readerAiSummaryAria}
+            >
+              <div className="mail-inbox-reader__ai-card">
+                <div className="mail-inbox-reader__ai-head">
+                  {isSpamFolder ? (
+                    <LuBan className="mail-inbox-reader__ai-sparkle mail-inbox-reader__ai-sparkle--spam" size={18} strokeWidth={2} aria-hidden />
+                  ) : (
+                    <LuSparkles className="mail-inbox-reader__ai-sparkle" size={18} strokeWidth={2} aria-hidden />
+                  )}
+                  <span className={`mail-inbox-reader__ai-label${isSpamFolder ? ' mail-inbox-reader__ai-label--spam' : ''}`}>
+                    {copy.readerAiSummaryLabel}
                   </span>
+                </div>
+
+                {/* İçerik: buton / yükleniyor / özet metni */}
+                {isSpamFolder ? (
+                  <p className="mail-inbox-reader__ai-text mail-inbox-reader__ai-text--spam">
+                    {copy.readerSpamNoAiSummaryText}
+                  </p>
+                ) : hasSummary ? (
+                  <p className="mail-inbox-reader__ai-text">
+                    {displayedSummary}
+                    {/* Yazım devam ediyorsa imleç */}
+                    {localSummary && displayedSummary.length < localSummary.length ? (
+                      <span className="mail-inbox-reader__ai-cursor" aria-hidden>▋</span>
+                    ) : null}
+                  </p>
+                ) : summarizing ? (
+                  <div className="mail-inbox-reader__ai-loading">
+                    <LuLoader className="mail-inbox-reader__summarize-spinner" size={15} strokeWidth={2.5} aria-hidden />
+                    <span>{isTr ? 'Özetleniyor...' : 'Summarizing...'}</span>
+                  </div>
+                ) : (
+                  <div className="mail-inbox-reader__ai-btn-wrap">
+                    <button
+                      type="button"
+                      className="mail-inbox-reader__summarize-btn"
+                      onClick={handleSummarize}
+                    >
+                      <LuSparkles size={14} strokeWidth={2} aria-hidden />
+                      <span>{isTr ? 'AI Özetle' : 'AI Summarize'}</span>
+                    </button>
+                    {summarizeError ? (
+                      <p className="mail-inbox-reader__summarize-error">{summarizeError}</p>
+                    ) : null}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : null}
+
+          <div className="mail-inbox-reader__meta">
+            <div className="mail-inbox-reader__from-line">
+              {model.showRecipientPrefix ? (
+                <><span className="mail-inbox-reader__to-prefix">{copy.readerToPrefix}</span>{' '}</>
+              ) : null}
+              <span className="mail-inbox-reader__from-name">{model.displayName}</span>
+              {model.displayEmail ? (
+                <span className="mail-inbox-reader__from-email">&lt;{model.displayEmail}&gt;</span>
+              ) : null}
+            </div>
+            <time className="mail-inbox-reader__when" {...(model.dateTimeIso ? { dateTime: model.dateTimeIso } : {})}>
+              {model.timeDisplay}
+            </time>
+          </div>
+
+          <div className={htmlBody ? 'mail-inbox-reader__body mail-inbox-reader__body--html' : 'mail-inbox-reader__body'}>
+            {htmlBody ? (
+              <div
+                className="mail-inbox-reader__html-root mail-inbox-reader__html-root--marketing"
+                // eslint-disable-next-line react/no-danger -- sanitizeMailHtml ile temizlenir
+                dangerouslySetInnerHTML={{ __html: htmlBody }}
+              />
+            ) : (
+              paragraphs.map((block, i) => (
+                <p key={i} className="mail-inbox-reader__para">
+                  {block.split('\n').map((line, j, arr) => (
+                    <span key={j}>
+                      {line}
+                      {j < arr.length - 1 ? <br /> : null}
+                    </span>
+                  ))}
+                </p>
+              ))
+            )}
+          </div>
+
+          {files.length > 0 ? (
+            <div className="mail-inbox-reader__attachments" role="group" aria-label={copy.inboxAttachmentsLabel}>
+              <ul className="mail-inbox-reader__attach-list">
+                {files.map((name) => (
+                  <li key={name} className="mail-inbox-reader__attach-item">{name}</li>
                 ))}
-              </p>
-            ))
-          )}
+              </ul>
+            </div>
+          ) : null}
         </div>
 
-        {files.length > 0 ? (
-          <div className="mail-inbox-reader__attachments" role="group" aria-label={copy.inboxAttachmentsLabel}>
-            <ul className="mail-inbox-reader__attach-list">
-              {files.map((name) => (
-                <li key={name} className="mail-inbox-reader__attach-item">{name}</li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-      </div>
-
-      {showProposalsPanel ? (
-        <aside
-          className="mail-inbox-reader__proposals"
-          aria-label={isTr ? 'AI önerileri' : 'AI suggestions'}
-        >
-          <div className="mail-inbox-reader__proposals-head">
-            <LuSparkles size={16} strokeWidth={2} aria-hidden />
-            <span className="mail-inbox-reader__proposals-title">
-              {isTr ? 'AI Önerileri' : 'AI Suggestions'}
-            </span>
-            {proposalsTotal > 0 ? (
-              <span className="mail-inbox-reader__proposals-count">{proposalsTotal}</span>
-            ) : null}
-          </div>
-
-          {proposalsLoading ? (
-            <div className="mail-inbox-reader__proposals-loading">
-              <LuLoader size={14} strokeWidth={2.5} aria-hidden />
-              <span>{isTr ? 'Yükleniyor...' : 'Loading...'}</span>
+        {showProposalsPanel ? (
+          <aside
+            className="mail-inbox-reader__proposals"
+            aria-label={isTr ? 'AI önerileri' : 'AI suggestions'}
+          >
+            <div className="mail-inbox-reader__proposals-head">
+              <LuSparkles size={16} strokeWidth={2} aria-hidden />
+              <span className="mail-inbox-reader__proposals-title">
+                {isTr ? 'AI Önerileri' : 'AI Suggestions'}
+              </span>
+              {proposalsTotal > 0 ? (
+                <span className="mail-inbox-reader__proposals-count">{proposalsTotal}</span>
+              ) : null}
             </div>
-          ) : proposalsTotal === 0 ? (
-            <p className="mail-inbox-reader__proposals-empty">
-              {isTr
-                ? 'Bu mail için bekleyen AI önerisi yok.'
-                : 'No pending AI suggestions for this email.'}
-            </p>
-          ) : (
-            <ul className="mail-inbox-reader__proposals-list">
-              {proposals?.tasks.map((t) => (
-                <li key={t.id} className="mail-inbox-reader__proposal-item">
-                  <div className="mail-inbox-reader__proposal-head">
-                    <LuListTodo size={14} strokeWidth={2} aria-hidden />
-                    <span className="mail-inbox-reader__proposal-kind">
-                      {isTr ? 'Görev' : 'Task'}
-                    </span>
-                  </div>
-                  <p className="mail-inbox-reader__proposal-title">{t.title}</p>
-                  {t.dueAt ? (
+
+            {proposalsLoading ? (
+              <div className="mail-inbox-reader__proposals-loading">
+                <LuLoader size={14} strokeWidth={2.5} aria-hidden />
+                <span>{isTr ? 'Yükleniyor...' : 'Loading...'}</span>
+              </div>
+            ) : proposalsTotal === 0 ? (
+              <p className="mail-inbox-reader__proposals-empty">
+                {isTr
+                  ? 'Bu mail için bekleyen AI önerisi yok.'
+                  : 'No pending AI suggestions for this email.'}
+              </p>
+            ) : (
+              <ul className="mail-inbox-reader__proposals-list">
+                {proposals?.tasks.map((t) => (
+                  <li key={t.id} className="mail-inbox-reader__proposal-item">
+                    <div className="mail-inbox-reader__proposal-head">
+                      <LuListTodo size={14} strokeWidth={2} aria-hidden />
+                      <span className="mail-inbox-reader__proposal-kind">
+                        {isTr ? 'Görev' : 'Task'}
+                      </span>
+                    </div>
+                    <p className="mail-inbox-reader__proposal-title">{t.title}</p>
+                    {t.dueAt ? (
+                      <p className="mail-inbox-reader__proposal-meta">
+                        {isTr ? 'Son tarih: ' : 'Due: '}
+                        {new Date(t.dueAt).toLocaleString(isTr ? 'tr-TR' : 'en-US', {
+                          day: 'numeric',
+                          month: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </p>
+                    ) : null}
+                    {t.notes ? (
+                      <p className="mail-inbox-reader__proposal-notes">{t.notes}</p>
+                    ) : null}
+                    <div className="mail-inbox-reader__proposal-actions">
+                      <button
+                        type="button"
+                        className="mail-inbox-reader__proposal-btn mail-inbox-reader__proposal-btn--approve"
+                        onClick={() => handleProposalAction('task', t.id, 'approve')}
+                        disabled={pendingActionId === t.id}
+                      >
+                        <LuCheck size={13} strokeWidth={2.5} aria-hidden />
+                        <span>{isTr ? 'Onayla' : 'Approve'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="mail-inbox-reader__proposal-btn mail-inbox-reader__proposal-btn--reject"
+                        onClick={() => handleProposalAction('task', t.id, 'reject')}
+                        disabled={pendingActionId === t.id}
+                      >
+                        <LuX size={13} strokeWidth={2.5} aria-hidden />
+                        <span>{isTr ? 'Reddet' : 'Reject'}</span>
+                      </button>
+                    </div>
+                  </li>
+                ))}
+                {proposals?.calendarEvents.map((e) => (
+                  <li key={e.id} className="mail-inbox-reader__proposal-item">
+                    <div className="mail-inbox-reader__proposal-head">
+                      <LuCalendar size={14} strokeWidth={2} aria-hidden />
+                      <span className="mail-inbox-reader__proposal-kind">
+                        {isTr ? 'Etkinlik' : 'Event'}
+                      </span>
+                    </div>
+                    <p className="mail-inbox-reader__proposal-title">{e.title}</p>
                     <p className="mail-inbox-reader__proposal-meta">
-                      {isTr ? 'Son tarih: ' : 'Due: '}
-                      {new Date(t.dueAt).toLocaleString(isTr ? 'tr-TR' : 'en-US', {
+                      {new Date(e.startAt).toLocaleString(isTr ? 'tr-TR' : 'en-US', {
                         day: 'numeric',
                         month: 'short',
-                        hour: '2-digit',
-                        minute: '2-digit',
+                        hour: e.isAllDay ? undefined : '2-digit',
+                        minute: e.isAllDay ? undefined : '2-digit',
                       })}
+                      {e.location ? ` · ${e.location}` : ''}
                     </p>
-                  ) : null}
-                  {t.notes ? (
-                    <p className="mail-inbox-reader__proposal-notes">{t.notes}</p>
-                  ) : null}
-                  <div className="mail-inbox-reader__proposal-actions">
-                    <button
-                      type="button"
-                      className="mail-inbox-reader__proposal-btn mail-inbox-reader__proposal-btn--approve"
-                      onClick={() => handleProposalAction('task', t.id, 'approve')}
-                      disabled={pendingActionId === t.id}
-                    >
-                      <LuCheck size={13} strokeWidth={2.5} aria-hidden />
-                      <span>{isTr ? 'Onayla' : 'Approve'}</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="mail-inbox-reader__proposal-btn mail-inbox-reader__proposal-btn--reject"
-                      onClick={() => handleProposalAction('task', t.id, 'reject')}
-                      disabled={pendingActionId === t.id}
-                    >
-                      <LuX size={13} strokeWidth={2.5} aria-hidden />
-                      <span>{isTr ? 'Reddet' : 'Reject'}</span>
-                    </button>
-                  </div>
-                </li>
-              ))}
-              {proposals?.calendarEvents.map((e) => (
-                <li key={e.id} className="mail-inbox-reader__proposal-item">
-                  <div className="mail-inbox-reader__proposal-head">
-                    <LuCalendar size={14} strokeWidth={2} aria-hidden />
-                    <span className="mail-inbox-reader__proposal-kind">
-                      {isTr ? 'Etkinlik' : 'Event'}
-                    </span>
-                  </div>
-                  <p className="mail-inbox-reader__proposal-title">{e.title}</p>
-                  <p className="mail-inbox-reader__proposal-meta">
-                    {new Date(e.startAt).toLocaleString(isTr ? 'tr-TR' : 'en-US', {
-                      day: 'numeric',
-                      month: 'short',
-                      hour: e.isAllDay ? undefined : '2-digit',
-                      minute: e.isAllDay ? undefined : '2-digit',
-                    })}
-                    {e.location ? ` · ${e.location}` : ''}
-                  </p>
-                  {e.description ? (
-                    <p className="mail-inbox-reader__proposal-notes">{e.description}</p>
-                  ) : null}
-                  <div className="mail-inbox-reader__proposal-actions">
-                    <button
-                      type="button"
-                      className="mail-inbox-reader__proposal-btn mail-inbox-reader__proposal-btn--approve"
-                      onClick={() => handleProposalAction('calendar-event', e.id, 'approve')}
-                      disabled={pendingActionId === e.id}
-                    >
-                      <LuCheck size={13} strokeWidth={2.5} aria-hidden />
-                      <span>{isTr ? 'Onayla' : 'Approve'}</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="mail-inbox-reader__proposal-btn mail-inbox-reader__proposal-btn--reject"
-                      onClick={() => handleProposalAction('calendar-event', e.id, 'reject')}
-                      disabled={pendingActionId === e.id}
-                    >
-                      <LuX size={13} strokeWidth={2.5} aria-hidden />
-                      <span>{isTr ? 'Reddet' : 'Reject'}</span>
-                    </button>
-                  </div>
-                </li>
-              ))}
-              {proposals?.reminders.map((r) => (
-                <li key={r.id} className="mail-inbox-reader__proposal-item">
-                  <div className="mail-inbox-reader__proposal-head">
-                    <LuSparkles size={14} strokeWidth={2} aria-hidden />
-                    <span className="mail-inbox-reader__proposal-kind">
-                      {isTr ? 'Hatırlatıcı' : 'Reminder'}
-                    </span>
-                  </div>
-                  <p className="mail-inbox-reader__proposal-title">{r.title}</p>
-                  {r.fireAt ? (
-                    <p className="mail-inbox-reader__proposal-meta">
-                      {new Date(r.fireAt).toLocaleString(isTr ? 'tr-TR' : 'en-US', {
-                        day: 'numeric',
-                        month: 'short',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </p>
-                  ) : null}
-                  {r.notes ? (
-                    <p className="mail-inbox-reader__proposal-notes">{r.notes}</p>
-                  ) : null}
-                  <div className="mail-inbox-reader__proposal-actions">
-                    <button
-                      type="button"
-                      className="mail-inbox-reader__proposal-btn mail-inbox-reader__proposal-btn--approve"
-                      onClick={() => handleProposalAction('reminder', r.id, 'approve')}
-                      disabled={pendingActionId === r.id}
-                    >
-                      <LuCheck size={13} strokeWidth={2.5} aria-hidden />
-                      <span>{isTr ? 'Onayla' : 'Approve'}</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="mail-inbox-reader__proposal-btn mail-inbox-reader__proposal-btn--reject"
-                      onClick={() => handleProposalAction('reminder', r.id, 'reject')}
-                      disabled={pendingActionId === r.id}
-                    >
-                      <LuX size={13} strokeWidth={2.5} aria-hidden />
-                      <span>{isTr ? 'Reddet' : 'Reject'}</span>
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </aside>
-      ) : null}
+                    {e.description ? (
+                      <p className="mail-inbox-reader__proposal-notes">{e.description}</p>
+                    ) : null}
+                    <div className="mail-inbox-reader__proposal-actions">
+                      <button
+                        type="button"
+                        className="mail-inbox-reader__proposal-btn mail-inbox-reader__proposal-btn--approve"
+                        onClick={() => handleProposalAction('calendar-event', e.id, 'approve')}
+                        disabled={pendingActionId === e.id}
+                      >
+                        <LuCheck size={13} strokeWidth={2.5} aria-hidden />
+                        <span>{isTr ? 'Onayla' : 'Approve'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="mail-inbox-reader__proposal-btn mail-inbox-reader__proposal-btn--reject"
+                        onClick={() => handleProposalAction('calendar-event', e.id, 'reject')}
+                        disabled={pendingActionId === e.id}
+                      >
+                        <LuX size={13} strokeWidth={2.5} aria-hidden />
+                        <span>{isTr ? 'Reddet' : 'Reject'}</span>
+                      </button>
+                    </div>
+                  </li>
+                ))}
+                {proposals?.reminders.map((r) => (
+                  <li key={r.id} className="mail-inbox-reader__proposal-item">
+                    <div className="mail-inbox-reader__proposal-head">
+                      <LuSparkles size={14} strokeWidth={2} aria-hidden />
+                      <span className="mail-inbox-reader__proposal-kind">
+                        {isTr ? 'Hatırlatıcı' : 'Reminder'}
+                      </span>
+                    </div>
+                    <p className="mail-inbox-reader__proposal-title">{r.title}</p>
+                    {r.fireAt ? (
+                      <p className="mail-inbox-reader__proposal-meta">
+                        {new Date(r.fireAt).toLocaleString(isTr ? 'tr-TR' : 'en-US', {
+                          day: 'numeric',
+                          month: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </p>
+                    ) : null}
+                    {r.notes ? (
+                      <p className="mail-inbox-reader__proposal-notes">{r.notes}</p>
+                    ) : null}
+                    <div className="mail-inbox-reader__proposal-actions">
+                      <button
+                        type="button"
+                        className="mail-inbox-reader__proposal-btn mail-inbox-reader__proposal-btn--approve"
+                        onClick={() => handleProposalAction('reminder', r.id, 'approve')}
+                        disabled={pendingActionId === r.id}
+                      >
+                        <LuCheck size={13} strokeWidth={2.5} aria-hidden />
+                        <span>{isTr ? 'Onayla' : 'Approve'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="mail-inbox-reader__proposal-btn mail-inbox-reader__proposal-btn--reject"
+                        onClick={() => handleProposalAction('reminder', r.id, 'reject')}
+                        disabled={pendingActionId === r.id}
+                      >
+                        <LuX size={13} strokeWidth={2.5} aria-hidden />
+                        <span>{isTr ? 'Reddet' : 'Reject'}</span>
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </aside>
+        ) : null}
       </div>
     </section>
   );
