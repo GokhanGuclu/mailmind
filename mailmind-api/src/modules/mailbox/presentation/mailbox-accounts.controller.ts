@@ -36,4 +36,14 @@ export class MailboxAccountsController {
   revoke(@Req() req: Request, @Param('id') id: string) {
     return this.svc.revoke(this.getUserId(req), id);
   }
+
+  @Post(':id/pause')
+  pause(@Req() req: Request, @Param('id') id: string) {
+    return this.svc.pause(this.getUserId(req), id);
+  }
+
+  @Post(':id/resume')
+  resume(@Req() req: Request, @Param('id') id: string) {
+    return this.svc.resume(this.getUserId(req), id);
+  }
 }

@@ -15,6 +15,7 @@ import {
   LuSearch,
   LuSend,
   LuSparkles,
+  LuServer,
   LuStar,
   LuTrash2,
   LuUserRound,
@@ -38,6 +39,7 @@ function mailNavbarTitle(pathname: string, copy: MailDashboardCopy): string {
   if (pathname.endsWith('/animsaticilar')) return 'Anımsatıcılar';
   if (pathname.endsWith('/gorevler')) return 'Görevler';
   if (pathname.endsWith('/ai-istatistik')) return 'AI İstatistikleri';
+  if (pathname.endsWith('/hesaplar')) return 'Mailbox Hesapları';
   if (pathname.endsWith('/new')) return copy.navNewMail;
   return copy.navGeneralInbox;
 }
@@ -246,6 +248,15 @@ export function MailLayout() {
             >
               <LuChartLine size={18} aria-hidden />
               AI İstatistik
+            </NavLink>
+            <NavLink
+              to="/mail/hesaplar"
+              className={({ isActive }) =>
+                `mail-dash-sidebar__link ${isActive ? 'mail-dash-sidebar__link--active' : ''}`
+              }
+            >
+              <LuServer size={18} aria-hidden />
+              Hesaplar
             </NavLink>
             <NavLink
               to="/mail/spam"

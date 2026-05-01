@@ -30,8 +30,11 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+// PAUSED'ı da "mailbox var" sayıyoruz: kullanıcı geçici durdurmuş olabilir,
+// /mail rotalarına girmeye devam edip Resume yapabilmeli; aksi halde
+// MailboxGuard onu /connect-email'e atar ve resume butonuna ulaşamaz.
 const computeHasActive = (accounts: MailboxAccount[]) =>
-  accounts.some((acc) => acc.status === 'ACTIVE');
+  accounts.some((acc) => acc.status === 'ACTIVE' || acc.status === 'PAUSED');
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>('loading');

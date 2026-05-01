@@ -89,6 +89,65 @@ export class MailboxAccountsService {
     });
   }
 
+  /**
+   * Kullanıcı UI'dan bozuk/yorgun bir hesabı geçici olarak duraklatır.
+   * Sync worker `status='ACTIVE'` filtresine baktığı için PAUSED hesaplar
+   * otomatik atlanır → "FAILED retry" log spam'i durur, credential silinmez.
+   */
+  async pause(userId: string, accountId: string) {
+    const acc = await this.prisma.mailboxAccount.findUnique({
+      where: { id: accountId },
+      select: { id: true, userId: true, status: true },
+    });
+    if (!acc) throw new NotFoundException('Mailbox account not found.');
+    if (acc.userId !== userId) throw new ForbiddenException();
+    if (acc.status === 'REVOKED') {
+      throw new BadRequestException('Cannot pause a revoked account.');
+    }
+    if (acc.status === 'PAUSED') {
+      // idempotent
+      return this.prisma.mailboxAccount.findUniqueOrThrow({
+        where: { id: acc.id },
+        select: this.accountSelect,
+      });
+    }
+
+    return this.prisma.mailboxAccount.update({
+      where: { id: acc.id },
+      data: { status: 'PAUSED' },
+      select: this.accountSelect,
+    });
+  }
+
+  async resume(userId: string, accountId: string) {
+    const acc = await this.prisma.mailboxAccount.findUnique({
+      where: { id: accountId },
+      select: { id: true, userId: true, status: true },
+    });
+    if (!acc) throw new NotFoundException('Mailbox account not found.');
+    if (acc.userId !== userId) throw new ForbiddenException();
+    if (acc.status !== 'PAUSED') {
+      throw new BadRequestException(`Cannot resume from ${acc.status}.`);
+    }
+
+    return this.prisma.mailboxAccount.update({
+      where: { id: acc.id },
+      data: { status: 'ACTIVE' },
+      select: this.accountSelect,
+    });
+  }
+
+  private readonly accountSelect = {
+    id: true,
+    userId: true,
+    provider: true,
+    email: true,
+    displayName: true,
+    status: true,
+    createdAt: true,
+    updatedAt: true,
+  } as const;
+
   async revoke(userId: string, accountId: string) {
     const acc = await this.prisma.mailboxAccount.findUnique({
       where: { id: accountId },

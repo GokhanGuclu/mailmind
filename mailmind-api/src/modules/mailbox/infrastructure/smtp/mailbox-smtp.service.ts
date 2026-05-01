@@ -25,10 +25,15 @@ export class MailboxSmtpService {
     // Sahiplik kontrolü
     const account = await this.prisma.mailboxAccount.findUnique({
       where: { id: accountId },
-      select: { userId: true, email: true, displayName: true },
+      select: { userId: true, email: true, displayName: true, status: true },
     });
     if (!account) throw new NotFoundException('Mailbox account not found.');
     if (account.userId !== userId) throw new ForbiddenException();
+    if (account.status !== 'ACTIVE') {
+      throw new BadRequestException(
+        `Cannot send: mailbox account is ${account.status.toLowerCase()}. Resume the account first.`,
+      );
+    }
 
     // SMTP credential yükle
     const cred = await this.prisma.mailboxCredential.findUnique({

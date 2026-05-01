@@ -84,6 +84,7 @@ enum MailProvider {
 enum MailboxAccountStatus {
   PENDING
   ACTIVE
+  PAUSED
   REVOKED
   ERROR
 }
